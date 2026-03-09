@@ -1,0 +1,148 @@
+# ============================================================
+# FTL Operator v0.9 — Multi-Constant Routing
+# ============================================================
+# Concept:
+#   v0.8 allowed SIM_PACK parameters to evolve.
+#   v0.9 allows the *digit stream itself* to change.
+#
+#   The system can dynamically switch between:
+#       π, φ, e, √2
+#
+#   based on:
+#       - warp distance Δi
+#       - landing intensity F[j]
+#       - landing shear L[j]
+#       - oscillator state (ω, γ, R_max)
+#       - SIM_PACK parameters (w, s, α, β)
+#
+#   Each constant has a known "signature":
+#       π   → wide L range, strong flips
+#       φ   → smooth growth, stable mid-range
+#       e   → laminar, low turbulence
+#       √2  → heavy F tails, chaotic spikes
+#
+#   v0.9 chooses the constant whose signature best matches
+#   the current warp/oscillator/SIM_PACK state.
+#
+#   This creates a self-routing portal kernel.
+
+
+# ------------------------------------------------------------
+# Constant selection score functions
+# ------------------------------------------------------------
+
+# π score:
+#   Reward strong flips and large L variability
+score_pi(j, L, F, flips):
+    return  a_pi * flips[j]  +  b_pi * (L[j] / max(L))
+
+# φ score:
+#   Reward mid-range L and smooth F
+score_phi(j, L, F):
+    return  a_phi * exp(-|L[j] - L_mid|)  +  b_phi * (1 / (1 + var(F_window)))
+
+# e score:
+#   Reward laminar regions (low F variance)
+score_e(j, F):
+    return  a_e * (1 / (ε + var(F_window)))
+
+# √2 score:
+#   Reward high F spikes and chaotic zones
+score_sqrt2(j, F):
+    return  a_s2 * max(0, F[j] - (mean(F) + 2*std(F)))
+
+
+# ------------------------------------------------------------
+# Constant selection rule
+# ------------------------------------------------------------
+
+# Compute scores for each constant at landing index j:
+#   S_pi, S_phi, S_e, S_s2
+
+# Choose constant with maximum score:
+#   new_constant = argmax{S_pi, S_phi, S_e, S_s2}
+
+# This determines the next digit stream d_next.
+
+
+# ------------------------------------------------------------
+# FTL v0.9 pseudocode
+# ------------------------------------------------------------
+
+function FTL_jump_v09(i, t,
+                      L, F, d_current,
+                      w, s, α, β,
+                      H_fwd_base, H_back_base,
+                      w_L, w_F, w_flip, w_neut, w_back,
+                      τ_open, v_boost,
+                      ω, γ, R_max,
+                      k_ω, k_γ, k_R,
+                      k_w, k_s, k_α, k_β, k_β_decay,
+                      w_min, w_max,
+                      digit_streams,   # {π, φ, e, √2}
+                      ε):
+
+    # -----------------------------------------
+    # 1. Perform warp using v0.8 logic
+    # -----------------------------------------
+    j, ω_new, γ_new, R_max_new,
+       w_new, s_new, α_new, β_new = 
+           FTL_jump_v08(i, t,
+                        L, F, d_current,
+                        w, s, α, β,
+                        H_fwd_base, H_back_base,
+                        w_L, w_F, w_flip, w_neut, w_back,
+                        τ_open, v_boost,
+                        ω, γ, R_max,
+                        k_ω, k_γ, k_R,
+                        k_w, k_s, k_α, k_β, k_β_decay,
+                        w_min, w_max,
+                        ε)
+
+    # -----------------------------------------
+    # 2. Compute constant scores at landing point
+    # -----------------------------------------
+    S_pi    = score_pi(j, L, F, flips)
+    S_phi   = score_phi(j, L, F)
+    S_e     = score_e(j, F)
+    S_s2    = score_sqrt2(j, F)
+
+    # -----------------------------------------
+    # 3. Choose new constant
+    # -----------------------------------------
+    scores = { "pi": S_pi,
+               "phi": S_phi,
+               "e": S_e,
+               "sqrt2": S_s2 }
+
+    new_constant = argmax(scores)
+
+    # -----------------------------------------
+    # 4. Load new digit stream
+    # -----------------------------------------
+    d_next = digit_streams[new_constant]
+
+    # -----------------------------------------
+    # 5. Return updated state
+    # -----------------------------------------
+    return j, d_next, ω_new, γ_new, R_max_new, w_new, s_new, α_new, β_new
+
+
+# ------------------------------------------------------------
+# Example parameters (tunable)
+# ------------------------------------------------------------
+#   a_pi   = 1.0
+#   b_pi   = 0.5
+#   a_phi  = 1.2
+#   b_phi  = 0.8
+#   a_e    = 1.0
+#   a_s2   = 1.5
+#
+#   L_mid  = median(L)
+#
+#   digit_streams = {
+#       "pi":    digits_of_pi,
+#       "phi":   digits_of_phi,
+#       "e":     digits_of_e,
+#       "sqrt2": digits_of_sqrt2
+#   }
