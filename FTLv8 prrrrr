@@ -1,0 +1,165 @@
+# ============================================================
+# FTL Operator v0.8 — Terrain-Adaptive SIM_PACK
+# ============================================================
+# Concept:
+#   v0.7 allowed warp events to modify the oscillator.
+#   v0.8 closes the loop by allowing warp events to modify
+#   the SIM_PACK parameters themselves:
+#
+#       - window radius w
+#       - zeta exponent s
+#       - repdigit weight α
+#       - flip weight β
+#
+#   These parameters evolve based on:
+#       - warp distance Δi
+#       - landing intensity F[j]
+#       - landing shear L[j]
+#       - warp direction (forward/backward)
+#       - oscillator state (ω, γ, R_max)
+#
+#   This creates a self-modifying bead-field:
+#       SIM_PACK → warp → oscillator → SIM_PACK → ...
+#
+#   The system becomes a recursive portal kernel.
+# ------------------------------------------------------------
+# SIM_PACK parameter update rules
+# ------------------------------------------------------------
+
+# Let j be the warp landing index.
+# Let Δi = j - i.
+
+# 1. Window radius update (w):
+#    - Large forward warp → expand window
+#    - Large backward warp → contract window
+#
+#    w_new = clamp(w_old + k_w * sign(Δi) * (|Δi| / H_fwd_base),
+#                  w_min, w_max)
+
+# 2. Zeta exponent update (s):
+#    - High F intensity → increase s (sharper density)
+#    - Low F intensity → decrease s (smoother density)
+#
+#    s_new = s_old + k_s * (F[j] - mean(F))
+
+# 3. Repdigit weight update (α):
+#    - Forward warp into compression → increase α
+#    - Backward warp into expansion → decrease α
+#
+#    α_new = α_old * (1 + k_α * sign(Δi) * (1 / (ε + L[j])))
+
+# 4. Flip weight update (β):
+#    - If warp lands on a flip transition, boost β
+#    - Otherwise, slight decay toward baseline
+#
+#    if (d[j-1], d[j]) ∈ FLIP_SET:
+#        β_new = β_old + k_β
+#    else:
+#        β_new = β_old * (1 - k_β_decay)
+# ------------------------------------------------------------
+# FTL v0.8 pseudocode
+# ------------------------------------------------------------
+
+function FTL_jump_v08(i, t,
+                      L, F, d,
+                      w, s, α, β,
+                      H_fwd_base, H_back_base,
+                      w_L, w_F, w_flip, w_neut, w_back,
+                      τ_open, v_boost,
+                      ω, γ, R_max,
+                      k_ω, k_γ, k_R,
+                      k_w, k_s, k_α, k_β, k_β_decay,
+                      w_min, w_max,
+                      ε):# -----------------------------------------
+# 1. Use v0.6 to compute dynamic horizons
+# -----------------------------------------
+pf = phase_factor(t)
+vf = vel_factor(t)
+inf = intensity_factor(i)
+
+H_fwd = int(H_fwd_base * pf * vf * inf)
+H_back = int(H_back_base * pf * vf * inf)
+
+H_fwd = max(1, H_fwd)
+H_back = max(1, H_back)
+
+# -----------------------------------------
+# 2. Check breathing gate
+# -----------------------------------------
+if abs(R(t)) / R_max >= τ_open:
+    return i + 1, ω, γ, R_max, w, s, α, β
+
+vel = v(t)
+
+# -----------------------------------------
+# 3. Compute forward/backward candidates
+# -----------------------------------------
+best_fwd_j = compute_best_forward(i, L, F, d,
+                                  H_fwd,
+                                  w_L, w_F, w_flip, w_neut,
+                                  ε)
+
+best_back_j = compute_best_backward(i, L,
+                                    H_back,
+                                    w_back,
+                                    ε)
+
+# -----------------------------------------
+# 4. Velocity-gated direction selection
+# -----------------------------------------
+if vel > v_boost:
+    j = best_fwd_j
+elif vel < -v_boost:
+    j = best_back_j
+else:
+    return i + 1, ω, γ, R_max, w, s, α, β
+
+# -----------------------------------------
+# 5. Compute warp distance
+# -----------------------------------------
+Δi = j - i
+
+# -----------------------------------------
+# 6. Oscillator updates (from v0.7)
+# -----------------------------------------
+ω_new = ω * (1 + k_ω * sign(Δi) * (1 / (ε + L[j])))
+γ_new = γ + k_γ * (F[j] - mean(F))
+R_max_new = R_max * (1 + k_R * (abs(Δi) / H_fwd_base))
+
+# -----------------------------------------
+# 7. SIM_PACK parameter updates (new in v0.8)
+# -----------------------------------------
+
+# Window radius
+w_new = w + k_w * sign(Δi) * (abs(Δi) / H_fwd_base)
+w_new = clamp(w_new, w_min, w_max)
+
+# Zeta exponent
+s_new = s + k_s * (F[j] - mean(F))
+
+# Repdigit weight
+α_new = α * (1 + k_α * sign(Δi) * (1 / (ε + L[j])))
+
+# Flip weight
+if (d[j-1], d[j]) in FLIP_SET:
+    β_new = β + k_β
+else:
+    β_new = β * (1 - k_β_decay)
+
+# -----------------------------------------
+# 8. Return new index + updated oscillator + updated SIM_PACK
+# -----------------------------------------
+return j, ω_new, γ_new, R_max_new, w_new, s_new, α_new, β_new# ------------------------------------------------------------
+# Example parameters (tunable)
+# ------------------------------------------------------------
+#   k_w         = 0.05
+#   k_s         = 0.01
+#   k_α         = 0.02
+#   k_β         = 0.1
+#   k_β_decay   = 0.01
+#
+#   w_min       = 1
+#   w_max       = 20
+#
+#   (other parameters same as v0.7)
+
