@@ -1,0 +1,147 @@
+# ============================================================
+# FTL Operator v0.7 — Recursive Warp Feedback
+# ============================================================
+# Concept:
+#   v0.6 made the warp horizon dynamic.
+#   v0.7 makes the warp *change the oscillator itself*.
+#
+#   After a warp event (forward or backward), the oscillator
+#   parameters (ω, γ, R_max) are updated based on:
+#
+#       - warp distance (Δi)
+#       - local bead-field intensity (F at landing point)
+#       - shear length (L at landing point)
+#       - direction of warp (forward/backward)
+#
+#   This creates a closed-loop system:
+#
+#       SIM_PACK terrain → warp → oscillator update → new warp horizon
+#
+#   The oscillator becomes a living part of the portal dynamics.
+
+
+# ------------------------------------------------------------
+# Oscillator update rules
+# ------------------------------------------------------------
+
+# Let j be the warp landing index.
+# Let Δi = j - i  (positive = forward, negative = backward)
+
+# 1. Frequency update (ω):
+#    - Forward warp into compression (L small) increases ω
+#    - Backward warp into expansion (L large) decreases ω
+#
+#    ω_new = ω_old * (1 + k_ω * sign(Δi) * (1 / (ε + L[j])))
+
+# 2. Damping update (γ):
+#    - High F intensity increases damping (system stabilizes)
+#    - Low F intensity decreases damping (system becomes lively)
+#
+#    γ_new = γ_old + k_γ * (F[j] - mean(F))
+
+# 3. Amplitude update (R_max):
+#    - Large warp distance increases amplitude
+#    - Small warp distance decreases amplitude
+#
+#    R_max_new = R_max_old * (1 + k_R * (|Δi| / H_fwd_base))
+
+
+# ------------------------------------------------------------
+# FTL v0.7 pseudocode
+# ------------------------------------------------------------
+
+function FTL_jump_v07(i, t,
+                      L, F, d,
+                      H_fwd_base, H_back_base,
+                      w_L, w_F, w_flip, w_neut, w_back,
+                      τ_open, v_boost,
+                      ω, γ, R_max,
+                      k_ω, k_γ, k_R,
+                      ε):
+
+    # -----------------------------------------
+    # 1. Use v0.6 to compute dynamic horizons
+    # -----------------------------------------
+    pf = phase_factor(t)
+    vf = vel_factor(t)
+    inf = intensity_factor(i)
+
+    H_fwd = int(H_fwd_base * pf * vf * inf)
+    H_back = int(H_back_base * pf * vf * inf)
+
+    H_fwd = max(1, H_fwd)
+    H_back = max(1, H_back)
+
+    # -----------------------------------------
+    # 2. Check breathing gate
+    # -----------------------------------------
+    if abs(R(t)) / R_max >= τ_open:
+        return i + 1, ω, γ, R_max
+
+    vel = v(t)
+
+    # -----------------------------------------
+    # 3. Compute forward/backward candidates
+    # -----------------------------------------
+    best_fwd_j = compute_best_forward(i, L, F, d,
+                                      H_fwd,
+                                      w_L, w_F, w_flip, w_neut,
+                                      ε)
+
+    best_back_j = compute_best_backward(i, L,
+                                        H_back,
+                                        w_back,
+                                        ε)
+
+    # -----------------------------------------
+    # 4. Choose direction based on velocity
+    # -----------------------------------------
+    if vel > v_boost:
+        j = best_fwd_j
+    elif vel < -v_boost:
+        j = best_back_j
+    else:
+        return i + 1, ω, γ, R_max
+
+    # -----------------------------------------
+    # 5. Compute warp distance
+    # -----------------------------------------
+    Δi = j - i
+
+    # -----------------------------------------
+    # 6. Oscillator parameter updates
+    # -----------------------------------------
+
+    # Frequency update
+    ω_new = ω * (1 + k_ω * sign(Δi) * (1 / (ε + L[j])))
+
+    # Damping update
+    γ_new = γ + k_γ * (F[j] - mean(F))
+
+    # Amplitude update
+    R_max_new = R_max * (1 + k_R * (abs(Δi) / H_fwd_base))
+
+    # -----------------------------------------
+    # 7. Return new index + updated oscillator
+    # -----------------------------------------
+    return j, ω_new, γ_new, R_max_new
+
+
+# ------------------------------------------------------------
+# Example parameters (tunable)
+# ------------------------------------------------------------
+#   H_fwd_base  = 500
+#   H_back_base = 500
+#   w_L         = 1.0
+#   w_F         = 0.8
+#   w_flip      = 2.0
+#   w_neut      = 0.5
+#   w_back      = 1.2
+#   τ_open      = 0.03
+#   v_boost     = 0.5 * v_max
+#
+#   k_ω         = 0.02
+#   k_γ         = 0.01
+#   k_R         = 0.03
+#
+#   ε           = 1e-3
