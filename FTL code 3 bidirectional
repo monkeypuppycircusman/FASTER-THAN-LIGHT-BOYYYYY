@@ -1,0 +1,137 @@
+# ============================================================
+# FTL Operator v0.4 — Bidirectional Warp
+# ============================================================
+# Concept:
+#   v0.1–v0.3 only allowed forward jumps.
+#   v0.4 introduces *reverse jumps* when the bead-field becomes
+#   too "expanded" (L extremely large, e.g., near 999k plateaus).
+#
+#   Forward warp  = jump to next compression zone (L small)
+#   Backward warp = jump to previous expansion plateau (L huge)
+#
+#   This creates a push–pull dynamic:
+#       - compression attracts forward
+#       - expansion attracts backward
+#
+#   The operator chooses the stronger of the two forces.
+
+# ------------------------------------------------------------
+# Trigger definitions
+# ------------------------------------------------------------
+
+# Forward triggers (same as v0.2/v0.3):
+#   L < 50
+#   F spike
+#   flip transition
+#   neutral reset
+
+# Backward triggers (new):
+#   L > L_back_threshold (e.g., 99900, 999000, etc.)
+#   OR local plateau: L[j] ≈ 999 * k for integer k
+
+# ------------------------------------------------------------
+# Bidirectional cost model
+# ------------------------------------------------------------
+
+# Forward cost (reuse v0.3):
+#   COST_fwd(j) = weighted sum of:
+#       - tight shear reward
+#       - F spike reward
+#       - flip reward
+#       - neutral reset reward
+
+# Backward cost:
+#   COST_back(j) = w_back * plateau_strength(j)
+#
+#   plateau_strength(j) = 1 / (ε + |L[j] - 999*k|)
+#   where k = round(L[j] / 999)
+
+# ------------------------------------------------------------
+# FTL v0.4 pseudocode
+# ------------------------------------------------------------
+
+function FTL_jump_v04(i, L, F, d,
+                      H_fwd, H_back,
+                      w_L, w_F, w_flip, w_neut, w_back,
+                      ε):
+
+    μF = mean(F)
+    σF = std(F)
+
+    # -------------------------
+    # Forward scan
+    # -------------------------
+    best_fwd_j = i + 1
+    best_fwd_cost = -INF
+
+    j_fwd_max = min(N, i + H_fwd)
+
+    for j = i+1 to j_fwd_max:
+
+        # Tight shear
+        shear_term = max(0, 50 - L[j])
+        cost_L = w_L * shear_term
+
+        # F spike
+        spike_term = max(0, F[j] - (μF + 2*σF))
+        cost_F = w_F * spike_term
+
+        # Flip
+        if (d[j-1], d[j]) in FLIP_SET:
+            cost_flip = w_flip
+        else:
+            cost_flip = 0
+
+        # Neutral reset
+        neut_dist = abs(L[j] - 0.382)
+        cost_neut = w_neut * (1 / (ε + neut_dist))
+
+        # Total forward cost
+        cost_fwd = cost_L + cost_F + cost_flip + cost_neut
+
+        if cost_fwd > best_fwd_cost:
+            best_fwd_cost = cost_fwd
+            best_fwd_j = j
+
+    # -------------------------
+    # Backward scan
+    # -------------------------
+    best_back_j = i - 1
+    best_back_cost = -INF
+
+    j_back_min = max(1, i - H_back)
+
+    for j = i-1 down to j_back_min:
+
+        # Plateau detection
+        k = round(L[j] / 999)
+        plateau_center = 999 * k
+        plateau_dist = abs(L[j] - plateau_center)
+
+        plateau_strength = 1 / (ε + plateau_dist)
+        cost_back = w_back * plateau_strength
+
+        if cost_back > best_back_cost:
+            best_back_cost = cost_back
+            best_back_j = j
+
+    # -------------------------
+    # Choose direction
+    # -------------------------
+    if best_back_cost > best_fwd_cost:
+        return best_back_j
+    else:
+        return best_fwd_j
+
+
+# ------------------------------------------------------------
+# Example parameters (tunable)
+# ------------------------------------------------------------
+#   H_fwd   = 500
+#   H_back  = 500
+#   w_L     = 1.0
+#   w_F     = 0.8
+#   w_flip  = 2.0
+#   w_neut  = 0.5
+#   w_back  = 1.2
+#   ε       = 1e-3
