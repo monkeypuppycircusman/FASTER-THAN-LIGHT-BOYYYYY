@@ -1,0 +1,76 @@
+# ============================================================
+# FTL Operator v0.3 — Weighted-Cost Jump (argmin over terrain)
+# ============================================================
+
+# Idea:
+#   Instead of taking the first trigger that appears (v0.2),
+#   scan forward over a finite horizon H and choose the index j
+#   that minimizes a weighted cost function over:
+#       - tight shear (L small)
+#       - high F spikes
+#       - flip transitions
+#       - neutral reset proximity
+#
+#   This turns FTL into a "best available warp" selector.
+
+# Cost components:
+#   cost_L(j)   = w_L   * max(0, 50 - L[j])          # reward tight shear
+#   cost_F(j)   = w_F   * max(0, F[j] - (μF+2σF))    # reward high F spikes
+#   cost_flip(j)= w_flip if (d[j-1], d[j]) ∈ FLIP_SET else 0
+#   cost_neut(j)= w_neut * (1 / (ε + |L[j] - 0.382|)) # reward near neutral reset
+#
+# Total cost:
+#   COST(j) = cost_L(j) + cost_F(j) + cost_flip(j) + cost_neut(j)
+#
+# FTL v0.3 chooses j in [i+1, i+H] that maximizes COST(j).
+# (You can flip sign if you prefer minimization.)
+
+function FTL_jump_v03(i, L, F, d, H,
+                      w_L, w_F, w_flip, w_neut,
+                      ε):
+
+    μF = mean(F)
+    σF = std(F)
+
+    best_j = i + 1
+    best_cost = -INF
+
+    j_max = min(N, i + H)
+
+    for j = i+1 to j_max:
+
+        # 1. Tight shear component
+        shear_term = max(0, 50 - L[j])
+        cost_L = w_L * shear_term
+
+        # 2. High F spike component
+        spike_term = max(0, F[j] - (μF + 2*σF))
+        cost_F = w_F * spike_term
+
+        # 3. Flip transition component
+        if (d[j-1], d[j]) in FLIP_SET:
+            cost_flip = w_flip
+        else:
+            cost_flip = 0
+
+        # 4. Neutral reset proximity
+        neut_dist = abs(L[j] - 0.382)
+        cost_neut = w_neut * (1 / (ε + neut_dist))
+
+        # Total cost
+        cost = cost_L + cost_F + cost_flip + cost_neut
+
+        if cost > best_cost:
+            best_cost = cost
+            best_j = j
+
+    return best_j
+
+
+# Example parameter choices (tunable):
+#   H      = 500        # lookahead horizon
+#   w_L    = 1.0        # weight for tight shear
+#   w_F    = 0.8        # weight for F spikes
+#   w_flip = 2.0        # weight for flip transitions
+#   w_neut = 0.5        # weight for neutral reset
+#   ε      = 1e-3       # small smoothing term
