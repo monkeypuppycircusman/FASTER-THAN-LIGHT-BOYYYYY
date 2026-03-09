@@ -1,0 +1,121 @@
+# ============================================================
+# FTL Operator v0.6 — Phase-Scaled Warp Horizon
+# ============================================================
+# Concept:
+#   v0.5 gated warp direction using velocity and phase.
+#   v0.6 goes further: the *warp horizon itself* becomes dynamic.
+#
+#   The lookahead/lookbehind distances (H_fwd, H_back) are no
+#   longer constants. They scale with:
+#
+#       1. Oscillator phase (|R(t)| / R_max)
+#       2. Velocity magnitude (|v(t)|)
+#       3. Local bead-field intensity (F[i])
+#
+#   This creates a breathing warp horizon:
+#
+#       - When the oscillator is near center (R small),
+#         horizon expands → long-range warp possible.
+#
+#       - When oscillator is near extremes (R large),
+#         horizon contracts → short-range warp only.
+#
+#       - High F intensity amplifies horizon.
+#
+#   This is the first fully adaptive FTL operator.
+
+
+# ------------------------------------------------------------
+# Phase-scaling functions
+# ------------------------------------------------------------
+
+# Phase compression factor:
+#   small when |R(t)| is large (pendulum at extremes)
+#   large when |R(t)| is small (pendulum near center)
+phase_factor(t) = 1 / (ε + |R(t)| / R_max)
+
+# Velocity factor:
+#   amplifies horizon when |v(t)| is large
+vel_factor(t) = |v(t)| / v_max
+
+# Intensity factor:
+#   amplifies horizon in high-F regions
+intensity_factor(i) = F[i] / (mean(F) + ε)
+
+# Combined scaling:
+#   H_scaled = H_base * phase_factor * vel_factor * intensity_factor
+#
+#   This can expand or contract the warp horizon by orders of magnitude.
+
+
+# ------------------------------------------------------------
+# FTL v0.6 pseudocode
+# ------------------------------------------------------------
+
+function FTL_jump_v06(i, t,
+                      L, F, d,
+                      H_fwd_base, H_back_base,
+                      w_L, w_F, w_flip, w_neut, w_back,
+                      τ_open, v_boost, ε):
+
+    # -----------------------------------------
+    # 1. Check breathing gate (same as v0.5)
+    # -----------------------------------------
+    if abs(R(t)) / R_max >= τ_open:
+        return i + 1
+
+    vel = v(t)
+
+    # -----------------------------------------
+    # 2. Compute dynamic warp horizons
+    # -----------------------------------------
+    pf = phase_factor(t)
+    vf = vel_factor(t)
+    inf = intensity_factor(i)
+
+    H_fwd = int(H_fwd_base * pf * vf * inf)
+    H_back = int(H_back_base * pf * vf * inf)
+
+    # Clamp to minimum of 1
+    H_fwd = max(1, H_fwd)
+    H_back = max(1, H_back)
+
+    # -----------------------------------------
+    # 3. Compute forward/backward candidates
+    #    using v0.4 logic but with scaled horizons
+    # -----------------------------------------
+    best_fwd_j = compute_best_forward(i, L, F, d,
+                                      H_fwd,
+                                      w_L, w_F, w_flip, w_neut,
+                                      ε)
+
+    best_back_j = compute_best_backward(i, L,
+                                        H_back,
+                                        w_back,
+                                        ε)
+
+    # -----------------------------------------
+    # 4. Velocity-gated direction selection
+    # -----------------------------------------
+    if vel > v_boost:
+        return best_fwd_j
+
+    if vel < -v_boost:
+        return best_back_j
+
+    return i + 1
+
+
+# ------------------------------------------------------------
+# Example parameters (tunable)
+# ------------------------------------------------------------
+#   H_fwd_base  = 500
+#   H_back_base = 500
+#   w_L         = 1.0
+#   w_F         = 0.8
+#   w_flip      = 2.0
+#   w_neut      = 0.5
+#   w_back      = 1.2
+#   τ_open      = 0.03
+#   v_boost     = 0.5 * v_max
+#   ε           = 1e-3
