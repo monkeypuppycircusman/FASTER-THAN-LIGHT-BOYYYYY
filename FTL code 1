@@ -1,0 +1,168 @@
+# ============================================================
+# SIM_PACK v1 — Core Bead-Field Operator (pseudocode + formulas)
+# ============================================================
+
+Parameters:
+    w = 3          # window radius
+    s = 1          # zeta exponent
+    α = 0.5        # repdigit weight
+    β = 2          # flip weight
+
+Input:
+    digits d[1..N] from π, φ, e, √2
+
+Flip transitions:
+    FLIP_SET = {(9,0), (0,9), (1,9), (9,1)}
+
+For i = 1 to N:
+
+    # Window
+    W = [max(1, i-w) … min(N, i+w)]
+    window_sum = Σ d[j] for j ∈ W
+
+    # Quadratic forms
+    For j ∈ W:
+        Q[j] = j^2 + (window_sum)^2
+
+    # Local zeta density
+    Z[i] = Σ (1 / Q[j]^s) for j ∈ W
+
+    # Time / intensity operator
+    T[i] = 1
+    k = length of repdigit run containing i
+    if k > 1:
+        T[i] += α * k
+
+    if (d[i-1], d[i]) ∈ FLIP_SET:
+        T[i] += β
+
+    # Derived fields
+    L[i] = 1 / Z[i]          # shear length
+    F[i] = T[i] * Z[i]       # fractal slowness / bead intensity
+    D[i] = log(T[i]) / log(L[i])   # optional fractal dimension
+
+
+# ============================================================
+# Breathing Gate Model (continuous analog)
+# ============================================================
+
+# Displacement
+R(t) = R_max * sin(ω t + φ) * e^{-γ t}
+
+# Velocity
+v(t) ≈ ω * R_max * cos(ω t) * e^{-γ t}
+
+# Open fraction
+τ_open = R_thresh / R_max
+
+# Sync window
+Δt_sync ≈ (2/ω) * arcsin(τ_open)
+
+# Single-window fraction
+f_window = arcsin(τ_open) / π ≈ τ_open / π   (for small τ_open)
+
+# Momentum harvest condition
+v_boost = η * |v_max|
+Require: η > 1/2
+
+
+# ============================================================
+# Invert Gate Rules (discrete)
+# ============================================================
+
+# Forward drift attractor
+T += 3
+L -= 2
+# → slope attractor ≈ -1.5
+
+# Invert gate triggers when:
+    L < 50
+    OR F[i] is a high spike
+    OR L ≈ 999k (resonance plateau)
+
+# Neutral reset anchor:
+L ≈ 1/φ² ≈ 0.382
+
+
+# ============================================================
+# SIM_PACK Summary Statistics (optional)
+# ============================================================
+
+# Observed across π, φ, e, √2:
+#   T > 1 fraction ≈ 0.21–0.25
+#   Flip count ≈ 95
+#   Repdigit density ≈ 18–26%
+#   Heaviest F tail: √2
+#   Most laminar: e
+#   L range on π: ~32 → 999k
+
+
+# ============================================================
+# FTL Operator v0.1 — Single Trigger (tight-shear jump)
+# ============================================================
+
+# Definition:
+#   FTL(i) → j
+#   j = next index where L[j] < 50
+
+function FTL_jump_v01(i, L):
+    for j = i+1 to N:
+        if L[j] < 50:
+            return j
+    return N
+
+
+# ============================================================
+# FTL Operator v0.2 — Multi-Trigger (choose earliest)
+# ============================================================
+
+# Triggers:
+#   1. Tight shear: L < 50
+#   2. High F spike: F[j] > mean(F) + 2*std(F)
+#   3. Flip transition: (d[j-1], d[j]) ∈ FLIP_SET
+#   4. Neutral reset: L ≈ 1/φ²
+
+function FTL_jump_v02(i, L, F, d):
+    μF = mean(F)
+    σF = std(F)
+
+    for j = i+1 to N:
+
+        # Tight shear
+        if L[j] < 50:
+            return j
+
+        # High F spike
+        if F[j] > μF + 2*σF:
+            return j
+
+        # Flip transition
+        if (d[j-1], d[j]) in FLIP_SET:
+            return j
+
+        # Neutral reset
+        if abs(L[j] - 0.382) < 0.001:
+            return j
+
+    return N
+
+
+# ============================================================
+# FTL + Breathing Gate Fusion (phase-locked jump)
+# ============================================================
+
+# Only allow FTL jump when oscillator is in open window:
+#   |R(t)| / R_max < τ_open
+#   AND v(t) > v_boost threshold
+
+function FTL_phase_locked(i, t, L, F, d):
+    if |R(t)|/R_max < τ_open and v(t) > v_boost:
+        return FTL_jump_v02(i, L, F, d)
+    else:
+        return i + 1   # normal step
+
+
+# ============================================================
+# End of Giant Paste Block
+# ============================================================
+
