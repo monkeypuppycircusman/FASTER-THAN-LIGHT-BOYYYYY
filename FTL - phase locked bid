@@ -1,0 +1,119 @@
+# ============================================================
+# FTL Operator v0.5 — Phase-Locked Bidirectional Warp
+# ============================================================
+# Concept:
+#   v0.4 introduced bidirectional jumps based on bead-field terrain.
+#   v0.5 adds *oscillator phase* and *velocity direction* as gating:
+#
+#   - Forward warp allowed only when velocity v(t) > +v_boost
+#   - Backward warp allowed only when velocity v(t) < -v_boost
+#   - No warp when |v(t)| < v_boost  (insufficient momentum)
+#
+#   Additionally:
+#       - Warp only allowed inside the breathing "open window":
+#             |R(t)| / R_max < τ_open
+#
+#   This couples the discrete SIM_PACK terrain to the continuous
+#   breathing oscillator, producing a physically coherent warp rule.
+#
+#   The operator chooses:
+#       - forward target = best_fwd_j from v0.4
+#       - backward target = best_back_j from v0.4
+#       - direction = sign of velocity
+#       - only if phase window is open
+
+# ------------------------------------------------------------
+# Required inputs:
+#   i        = current index in SIM_PACK
+#   t        = current oscillator time
+#   L, F, d  = SIM_PACK fields
+#   R(t)     = displacement function
+#   v(t)     = velocity function
+#   τ_open   = open-window threshold
+#   v_boost  = minimum velocity magnitude for warp
+#
+#   best_fwd_j, best_back_j come from FTL v0.4
+# ------------------------------------------------------------
+
+function FTL_jump_v05(i, t,
+                      L, F, d,
+                      H_fwd, H_back,
+                      w_L, w_F, w_flip, w_neut, w_back,
+                      τ_open, v_boost, ε):
+
+    # -----------------------------------------
+    # 1. Check breathing gate (phase window)
+    # -----------------------------------------
+    if abs(R(t)) / R_max >= τ_open:
+        # Gate closed → no warp allowed
+        return i + 1
+
+    # -----------------------------------------
+    # 2. Compute velocity
+    # -----------------------------------------
+    vel = v(t)
+
+    # -----------------------------------------
+    # 3. Compute forward/backward candidates
+    #    using v0.4 logic
+    # -----------------------------------------
+    best_fwd_j = compute_best_forward(i, L, F, d,
+                                      H_fwd,
+                                      w_L, w_F, w_flip, w_neut,
+                                      ε)
+
+    best_back_j = compute_best_backward(i, L,
+                                        H_back,
+                                        w_back,
+                                        ε)
+
+    # -----------------------------------------
+    # 4. Velocity-gated direction selection
+    # -----------------------------------------
+
+    # Forward warp allowed only if velocity is strongly positive
+    if vel > v_boost:
+        return best_fwd_j
+
+    # Backward warp allowed only if velocity is strongly negative
+    if vel < -v_boost:
+        return best_back_j
+
+    # If velocity is too small → no warp
+    return i + 1
+
+
+# ------------------------------------------------------------
+# Helper stubs (reuse v0.4 logic)
+# ------------------------------------------------------------
+
+function compute_best_forward(i, L, F, d,
+                              H_fwd,
+                              w_L, w_F, w_flip, w_neut,
+                              ε):
+    # (Identical to forward scan in v0.4)
+    # Returns best_fwd_j
+    ...
+
+function compute_best_backward(i, L,
+                               H_back,
+                               w_back,
+                               ε):
+    # (Identical to backward scan in v0.4)
+    # Returns best_back_j
+    ...
+
+
+# ------------------------------------------------------------
+# Example parameters (tunable)
+# ------------------------------------------------------------
+#   H_fwd   = 500
+#   H_back  = 500
+#   w_L     = 1.0
+#   w_F     = 0.8
+#   w_flip  = 2.0
+#   w_neut  = 0.5
+#   w_back  = 1.2
+#   τ_open  = 0.03        # typical from R_thresh/R_max
+#   v_boost = 0.5 * v_max # momentum threshold
+#   ε       = 1e-3
