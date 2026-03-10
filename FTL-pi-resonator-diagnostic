@@ -1,0 +1,157 @@
+# ============================================
+# FTL π-RESONATOR DIAGNOSTICS + INTEGRATION
+# Drop-in block for your v2.5-style sim
+# ============================================
+
+# --- CONFIG EXTENSION ---
+CONFIG.setdefault("diagnostics", {
+    "log_interval": 20,    # ticks between diagnostics
+    "verbose": True,       # print to console
+    "log_to_gmf": True,    # store structured logs in GMF
+})
+
+# --- GMF EXTENSION ---
+gmf.setdefault("diagnostics", [])
+gmf.setdefault("attractor_traces", [])
+
+
+# --- DIAGNOSTIC FUNCTION ---
+
+def diagnostic_report(
+    tick,
+    bead_chain,
+    A,
+    collective,
+    warp_count,
+    L,
+    F,
+    d,
+    verbose=True,
+    log_to_gmf=True,
+):
+    """
+    Enhanced diagnostic snapshot for FTL-sim kernels.
+    Call every CONFIG["diagnostics"]["log_interval"] ticks.
+
+    Args:
+        tick: current tick index (int)
+        bead_chain: list of bead dicts (each with "kernel", "compression", "payload")
+        A: adjacency matrix (list of lists, 0/1)
+        collective: dict with at least "intent"
+        warp_count: total warps so far (int)
+        L, F, d: mode inputs for compute_mode_from_bead
+    """
+
+    if not verbose or not bead_chain:
+        return
+
+    last_bead = bead_chain[-1]
+    kernel = last_bead["kernel"]
+    comp = last_bead["compression"]
+    vol  = kernel["volume"]
+
+    # --- Topology ---
+    edge_count = int(sum(sum(row) for row in A) // 2)
+
+    # --- Motifs ---
+    payload = last_bead["payload"]
+    beads_cnt      = len(payload.get("beads", []))
+    highways_cnt   = len(payload.get("highways", []))
+    resonances_cnt = len(payload.get("resonances", []))
+    gates_cnt      = len(payload.get("gates", []))
+
+    # --- Stability ---
+    last_comp = kernel.get("last_comp", comp)
+    stability = 1.0 / (1.0 + abs(comp - last_comp) + 0.01)
+
+    # --- Mode & Intent (compute fresh) ---
+    index = (len(bead_chain) - 1) % len(d)
+    last_mode = compute_mode_from_bead(last_bead, L, F, d, index)
+    intent    = collective["intent"]
+
+    # --- Console printout ---
+    print(f"\n{'='*34}")
+    print(f" DIAGNOSTIC @ tick {tick:4d}  | warp#{warp_count}")
+    print(f" Volume:        {vol:>8.4f}")
+    crit_flag = "🔥 CRIT" if bead_is_critical(comp) else ""
+    print(f" Compression:   {comp:>8.4f} {crit_flag}")
+    print(f" Edges:         {edge_count:>8d}  (nodes={len(A)})")
+    print(f" Motifs:        beads={beads_cnt:2d}  highways={highways_cnt:2d}  "
+          f"res={resonances_cnt:2d}  gates={gates_cnt:2d}")
+    print(f" Mode vec:      {[f'{x:.3f}' for x in last_mode]}")
+    print(f" Intent vec:    {[f'{x:.3f}' for x in intent]}")
+    print(f" Stability:     {stability:.4f}")
+    print(f"{'='*34}\n")
+
+    # --- Remember for next delta ---
+    kernel["last_comp"] = comp
+
+    # --- Structured log into GMF for plotting later ---
+    if log_to_gmf:
+        gmf["diagnostics"].append({
+            "tick": tick,
+            "volume": vol,
+            "compression": comp,
+            "edges": edge_count,
+            "beads": beads_cnt,
+            "highways": highways_cnt,
+            "resonances": resonances_cnt,
+            "gates": gates_cnt,
+            "stability": stability,
+            "intent": intent.copy(),
+            "mode": last_mode.copy(),
+            "warp_count": warp_count,
+        })
+
+
+# --- TICK INTEGRATION HOOK EXAMPLE ---
+# Call this pattern at the end of your existing tick() function.
+
+def tick(pi_digits, bead_chain, A, collective, warp_counter, CONFIG, gmf):
+    """
+    Example skeleton; merge the marked parts into your real tick().
+    Assumes you already:
+      - build L, F, d from pi_digits
+      - compute new_bead with kernel, compression, payload
+      - update collective["intent"]
+      - update warp_counter
+    """
+
+    # --- your existing per-tick logic here ---
+    # L, F, d = build_signals_from_pi(pi_digits, ...)
+    # new_bead = {...}
+    # bead_chain.append(new_bead)
+    # update collective["intent"], warp_counter, etc.
+    # -------------------------------------------
+
+    # APPEND NEW BEAD (ensure this is in your real tick)
+    bead_chain.append(new_bead)
+
+    # UPDATE last_mode ON COLLECTIVE (optional convenience)
+    index = (len(bead_chain) - 1) % len(d)
+    collective["last_mode"] = compute_mode_from_bead(new_bead, L, F, d, index)
+
+    # OPTIONAL: snapshot attractor when attention is high
+    if max(collective["attention"]) > CONFIG["attention"]["attention_threshold"]:
+        gmf["attractor_traces"].append((
+            len(bead_chain),
+            collective["last_mode"],
+            max(collective["attention"]),
+        ))
+
+    # DIAGNOSTIC HOOK
+    if len(bead_chain) % CONFIG["diagnostics"]["log_interval"] == 0:
+        diagnostic_report(
+            tick=len(bead_chain),
+            bead_chain=bead_chain,
+            A=A,
+            collective=collective,
+            warp_count=warp_counter[0] if isinstance(warp_counter, list) else warp_counter,
+            L=L,
+            F=F,
+            d=d,
+            verbose=CONFIG["diagnostics"].get("verbose", True),
+            log_to_gmf=CONFIG["diagnostics"].get("log_to_gmf", True),
+        )
+
+    return bead_chain, A, collective, warp_counter, gmf
