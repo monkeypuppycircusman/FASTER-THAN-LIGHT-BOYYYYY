@@ -2,7 +2,6 @@
 
 π/e-powered topological resonator that breathes volume, warps edges, and locks intent like it's trying to punch through the decimal veil
 
-# FASTER-THAN-LIGHT-BOYYYYY
 ![Python](https://img.shields.io/badge/python-3.8+-blue)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Halloween ON TOP](https://img.shields.io/badge/Halloween-ON%20TOP-ff69b4)
