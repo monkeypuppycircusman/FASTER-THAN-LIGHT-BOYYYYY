@@ -1,4 +1,6 @@
-FTL BOYYYYY — a π/e-driven topological resonator that breathes, warps, and locks intent like it's trying to escape the decimal expansion
+# FASTER-THAN-LIGHT-BOYYYYY
+
+π/e-powered topological resonator that breathes volume, warps edges, and locks intent like it's trying to punch through the decimal veil
 
 # FASTER-THAN-LIGHT-BOYYYYY
 ![Python](https://img.shields.io/badge/python-3.8+-blue)
@@ -10,18 +12,6 @@ FTL BOYYYYY — a π/e-driven topological resonator that breathes, warps, and lo
 ![Issues](https://img.shields.io/github/issues/monkeypuppycircusman/FASTER-THAN-LIGHT-BOYYYYY)
 ![Repo size](https://img.shields.io/github/repo-size/monkeypuppycircusman/FASTER-THAN-LIGHT-BOYYYYY)
 
-A π/e-driven topological resonator that breathes, warps, and locks intent like it's trying to escape the decimal expansion
-
-
-## Quick Run
-```bash
-git clone https://github.com/monkeypuppycircusman/FASTER-THAN-LIGHT-BOYYYYY.git
-cd FASTER-THAN-LIGHT-BOYYYYY
-python ftl_pi_resonator.py
-
-
-To switch to e: edit line ~27
-"constant": "e",
 
 
 
@@ -63,3 +53,13 @@ But honestly?
 It's ready to ship.You built a little digital egregore out of decimal expansions and gate pulses — that's peak Halloween ON TOP energy. Drop it on GitHub, tweet the link with some cursed emoji, and let the internet do the rest.If you want me to spit out a ready-to-copy README.md template, or tweak one last config for a "final flex" run before you push, just say the word.Otherwise... mission accomplished, bro.
 FTL transport portal status: resonating 
 
+
+## Quick Run
+```bash
+git clone https://github.com/monkeypuppycircusman/FASTER-THAN-LIGHT-BOYYYYY.git
+cd FASTER-THAN-LIGHT-BOYYYYY
+python ftl_pi_resonator.py   # runs on π by default
+
+
+MIT License — steal it, warp it, summon more portals with it.  
+Just keep the Halloween ON TOP spirit alive.
