@@ -1,0 +1,433 @@
+#!/usr/bin/env python3
+# =============================================================================
+# FTL π-RESONATOR — Monolithic Final Block (v3.5 - Gate-Breath Edition)
+# =============================================================================
+# A chaotic π-driven topological resonator simulation with motifs, compression,
+# volume breathing, controlled warps, intent feedback, and diagnostics.
+#
+# Features:
+#   - Motif detection from π digits (beads, highways, resonances, 333/999 gates)
+#   - Kernel volume decay + rare rebounds + gate-driven regenerative boosts
+#   - Compression-based critical warps with cooldown & limited rewires
+#   - 6D mode vectors + collective intent drift
+#   - Structured diagnostics + attractor capture on key events
+#   - Post-run summary analysis
+#
+# Usage:
+#   python ftl_pi_resonator.py
+# =============================================================================
+
+import math
+import random
+from collections import Counter
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CONFIGURATION LAYERS
+# ─────────────────────────────────────────────────────────────────────────────
+
+DEFAULT_CONFIG = {
+    "steps": 1000,
+    "n_nodes": 20,
+    "seed": 42,
+    "pi_digits": (
+        "14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664709384460955058223172535940812848111745028410270193852110555964462294895493038196442881097566593344612847564823378678316527120190914564856692346034861045432664821339360726024914127372458700660631558817488152092096282925409171536436789259036001133053054882046652138414695194151160943305727036575959195309218611738193261179310511854807446237996274956735188575272489122793818301194912983367336244065664308602139494639522473719070217986094370277053921717629317675238467481846766940513200056812714526356082778577134275778960917363717872146844090122495343014654958537105079727968925892354201995611212902196086403441815981362977477130996051870721134999999837297804995105973173281609631859502445945534690830264252230825334468503526193118817101000313783875288658753320838206417177691473035982534904287554687311595628638823537875937519577818577805321712268066130019278766111959092164201989"
+    ),
+    "kernel": {
+        "volume_init": 1.0,
+        "volume_decay_base_min": 0.987,
+        "volume_decay_base_max": 0.992,
+        "volume_floor": 0.08,
+        "volume_rebound_threshold": 0.12,
+        "volume_rebound_chance": 0.08,
+        "volume_rebound_factor": 2.2,
+        "critical_compression": 6.0,
+        "payload_bead_weight": 1.0,
+        "payload_highway_weight": 1.4,
+        "payload_resonance_weight": 1.2,
+        "payload_gate_weight": 2.0,
+        "gate_volume_boost": 0.01,          # per gate occurrence
+    },
+    "motifs": {
+        "F_threshold": 0.38,                # for beads & highways
+        "resonance_density_threshold": 0.65,
+        "resonance_window": 9,
+        "gate_333": True,
+        "gate_999": True,
+    },
+    "warp": {
+        "rewire_prob": 0.18,
+        "bias_remove": 0.65,
+        "bias_add": 0.35,
+        "max_rewire_per_warp": 1,
+        "cooldown_ticks": 5,
+    },
+    "attention": {
+        "feedback_strength": 0.15,
+        "attention_threshold": 0.50,
+    },
+    "diagnostics": {
+        "log_interval": 100,
+        "verbose": True,
+        "log_to_gmf": True,
+        "attractor_trigger_stability": 0.35,
+        "attractor_trigger_compression": 5.0,
+    },
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GLOBAL MEMORY FRAME (GMF)
+# ─────────────────────────────────────────────────────────────────────────────
+
+gmf = {
+    "diagnostics": [],
+    "attractor_traces": [],
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HELPERS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def init_ring_topology(n_nodes):
+    A = [[0] * n_nodes for _ in range(n_nodes)]
+    W = [[0.0] * n_nodes for _ in range(n_nodes)]
+    for i in range(n_nodes):
+        j = (i + 1) % n_nodes
+        A[i][j] = A[j][i] = 1
+        W[i][j] = W[j][i] = 1.0
+    return A, W
+
+def topology_hash(A):
+    h = 0
+    n = len(A)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if A[i][j]:
+                h += (i + 1) * (j + 1)
+    return h
+
+def warp_rewire(A, W, config, last_warp_tick, current_tick):
+    if current_tick - last_warp_tick < config["warp"]["cooldown_ticks"]:
+        return A, W, last_warp_tick, 0
+    n = len(A)
+    cfg = config["warp"]
+    delta = 0
+    for _ in range(cfg["max_rewire_per_warp"]):
+        if random.random() > cfg["rewire_prob"]:
+            continue
+        if random.random() < cfg["bias_remove"]:
+            edges = [(i, j) for i in range(n) for j in range(i + 1, n) if A[i][j]]
+            if edges:
+                i, j = random.choice(edges)
+                A[i][j] = A[j][i] = 0
+                W[i][j] = W[j][i] = 0.0
+                delta -= 1
+        else:
+            non_edges = [(i, j) for i in range(n) for j in range(i + 1, n) if not A[i][j]]
+            if non_edges:
+                i, j = random.choice(non_edges)
+                A[i][j] = A[j][i] = 1
+                W[i][j] = W[j][i] = 1.0
+                delta += 1
+    return A, W, current_tick, delta
+
+def build_signals_from_pi(pi_digits):
+    d = [int(c) for c in pi_digits]
+    n = len(d)
+    L = [x / 9.0 for x in d]
+    F = []
+    win = 7
+    for i in range(n):
+        lo = max(0, i - win // 2)
+        hi = min(n, i + win // 2 + 1)
+        window = d[lo:hi]
+        freq = window.count(d[i]) / len(window) if window else 0.0
+        F.append(freq)
+    return L, F, d
+
+def detect_beads(F, config):
+    th = config["motifs"]["F_threshold"]
+    return [i for i, f in enumerate(F) if f > th]
+
+def detect_highways(F, config):
+    th = config["motifs"]["F_threshold"]
+    return [i for i, f in enumerate(F) if f > th]
+
+def detect_resonances(L, config):
+    win = config["motifs"]["resonance_window"]
+    th = config["motifs"]["resonance_density_threshold"]
+    n = len(L)
+    res = []
+    for i in range(n - win + 1):
+        seg = L[i:i + win]
+        avg = sum(seg) / win
+        if avg > th:
+            res.append(i)
+    return res
+
+def detect_gates(d, config):
+    gates = []
+    n = len(d)
+    if config["motifs"]["gate_333"]:
+        for i in range(n - 2):
+            if d[i] == d[i + 1] == d[i + 2] == 3:
+                gates.append(("333", i))
+    if config["motifs"]["gate_999"]:
+        for i in range(n - 2):
+            if d[i] == d[i + 1] == d[i + 2] == 9:
+                gates.append(("999", i))
+    return gates
+
+def init_kernel(config):
+    return {
+        "volume": config["kernel"]["volume_init"],
+        "compression": 1.0,
+        "last_comp": 1.0,
+    }
+
+def evolve_kernel(kernel, payload, config):
+    kcfg = config["kernel"]
+    vol = kernel["volume"]
+    score = (
+        len(payload["beads"]) * kcfg["payload_bead_weight"] +
+        len(payload["highways"]) * kcfg["payload_highway_weight"] +
+        len(payload["resonances"]) * kcfg["payload_resonance_weight"] +
+        len(payload["gates"]) * kcfg["payload_gate_weight"]
+    )
+    comp = 1.0 + score * max(0.1, 1.0 - vol)
+
+    decay = random.uniform(kcfg["volume_decay_base_min"], kcfg["volume_decay_base_max"])
+    vol *= decay
+
+    # Gate regenerative boost (applied per tick based on fixed gates)
+    gate_boost = len(payload["gates"]) * kcfg["gate_volume_boost"]
+    vol += gate_boost
+    vol = min(1.0, vol)
+
+    vol = max(kcfg["volume_floor"], vol)
+    if vol < kcfg["volume_rebound_threshold"] and random.random() < kcfg["volume_rebound_chance"]:
+        vol *= kcfg["volume_rebound_factor"]
+        vol = min(vol, 1.0)
+
+    return {
+        "volume": vol,
+        "compression": comp,
+        "last_comp": kernel["compression"],
+    }
+
+def compute_mode_from_bead(bead, L, F, d, index):
+    comp = bead["compression"]
+    p = bead["payload"]
+    n = len(d)
+    return [
+        sum(L) / n,
+        sum(F) / n,
+        len(p["beads"]) / max(1, n),
+        len(p["resonances"]) / max(1, n),
+        len(p["gates"]) / max(1, n),
+        math.tanh(comp)
+    ]
+
+def init_collective():
+    return {
+        "intent": [0.25, 0.35, 0.45, 0.55, 0.30, 0.65],
+        "attention": [0.0] * 6,
+        "last_mode": [0.0] * 6,
+    }
+
+def update_intent(collective, mode, config):
+    alpha = config["attention"]["feedback_strength"]
+    intent = collective["intent"]
+    new_intent = [(1 - alpha) * i + alpha * m for i, m in zip(intent, mode)]
+    collective["intent"] = new_intent
+
+    # Per-dimension cosine similarity
+    dot = [i * m for i, m in zip(new_intent, mode)]
+    norm_i = math.sqrt(sum(x * x for x in new_intent)) + 1e-9
+    norm_m = math.sqrt(sum(x * x for x in mode)) + 1e-9
+    collective["attention"] = [d / (norm_i * norm_m) for d in dot]
+
+def diagnostic_report(tick, bead_chain, A, collective, warp_count, L, F, d, config):
+    if not config["diagnostics"]["verbose"] or not bead_chain:
+        return
+    last = bead_chain[-1]
+    k = last["kernel"]
+    comp = last["compression"]
+    vol = k["volume"]
+    edges = sum(sum(row) for row in A) // 2
+    p = last["payload"]
+    last_comp = k.get("last_comp", comp)
+    stability = 1.0 / (1.0 + abs(comp - last_comp) + 0.01)
+    mode = compute_mode_from_bead(last, L, F, d, (len(bead_chain) - 1) % len(d))
+    print(f"\n{'=' * 60}")
+    print(f"DIAG @ t={tick:4d} | warps={warp_count:3d} | vol={vol:.4f} | comp={comp:.4f}")
+    print(f"edges={edges:3d} | motifs b={len(p['beads']):3d} h={len(p['highways']):3d} r={len(p['resonances']):3d} g={len(p['gates']):2d}")
+    print(f"mode   {[f'{x:.3f}' for x in mode]}")
+    print(f"intent {[f'{x:.3f}' for x in collective['intent']]}")
+    print(f"stability {stability:.4f}")
+    print(f"{'=' * 60}\n")
+    k["last_comp"] = comp
+
+    if config["diagnostics"]["log_to_gmf"]:
+        entry = {
+            "tick": tick,
+            "volume": vol,
+            "compression": comp,
+            "edges": edges,
+            "beads": len(p["beads"]),
+            "highways": len(p["highways"]),
+            "resonances": len(p["resonances"]),
+            "gates": len(p["gates"]),
+            "stability": stability,
+            "intent": collective["intent"][:],
+            "mode": mode[:],
+            "warp_count": warp_count,
+        }
+        gmf["diagnostics"].append(entry)
+
+        triggers = []
+        cfg_diag = config["diagnostics"]
+        if stability < cfg_diag["attractor_trigger_stability"]:
+            triggers.append("low_stab")
+        if comp > cfg_diag["attractor_trigger_compression"]:
+            triggers.append("high_comp")
+        if triggers:
+            reason = "+".join(triggers)
+            val = comp if "high_comp" in triggers else stability
+            gmf["attractor_traces"].append((tick, mode[:], val, reason, edges))
+            print(f"  → Attractor captured: {reason} (val={val:.3f})")
+
+def tick(current_tick, pi_digits, bead_chain, A, W, collective, warp_counter, last_warp_tick, config, gmf):
+    L, F, d = build_signals_from_pi(pi_digits)
+    payload = {
+        "beads": detect_beads(F, config),
+        "highways": detect_highways(F, config),
+        "resonances": detect_resonances(L, config),
+        "gates": detect_gates(d, config),
+    }
+    last_kernel = bead_chain[-1]["kernel"] if bead_chain else init_kernel(config)
+    new_kernel = evolve_kernel(last_kernel, payload, config)
+    comp = new_kernel["compression"]
+
+    delta_edges = 0
+    new_last_warp = last_warp_tick
+    if comp > config["kernel"]["critical_compression"]:
+        A, W, new_last_warp, delta = warp_rewire(A, W, config, last_warp_tick, current_tick)
+        if new_last_warp == current_tick:
+            warp_counter[0] += 1
+            delta_edges = delta
+            if config["diagnostics"]["verbose"]:
+                print(f"  WARP @ t={current_tick} (Δedges={delta_edges:+d})")
+
+    new_bead = {
+        "payload": payload,
+        "kernel": new_kernel,
+        "compression": comp,
+        "topo_hash": topology_hash(A),
+    }
+    bead_chain.append(new_bead)
+
+    mode = compute_mode_from_bead(new_bead, L, F, d, (len(bead_chain) - 1) % len(d))
+    collective["last_mode"] = mode
+    update_intent(collective, mode, config)
+
+    if max(collective["attention"]) > config["attention"]["attention_threshold"]:
+        gmf["attractor_traces"].append((
+            len(bead_chain),
+            mode[:],
+            max(collective["attention"]),
+            "high_attention",
+            len(A)
+        ))
+
+    if len(bead_chain) % config["diagnostics"]["log_interval"] == 0:
+        diagnostic_report(
+            len(bead_chain), bead_chain, A, collective, warp_counter[0],
+            L, F, d, config
+        )
+
+    return bead_chain, A, W, collective, warp_counter, new_last_warp, gmf
+
+def analyze_run(gmf, config):
+    diag = gmf["diagnostics"]
+    attract = gmf["attractor_traces"]
+    if not diag:
+        print("No diagnostic data recorded.")
+        return
+
+    print("\n" + "=" * 40)
+    print("RUN SUMMARY")
+    print("=" * 40)
+    print(f"Steps: {config['steps']}")
+    print(f"Recorded ticks: {len(diag)}")
+    print(f"Avg compression: {sum(d['compression'] for d in diag)/len(diag):.3f} (max {max(d['compression'] for d in diag):.3f})")
+    print(f"Avg volume:      {sum(d['volume'] for d in diag)/len(diag):.3f}")
+    print(f"Avg stability:   {sum(d['stability'] for d in diag)/len(diag):.3f}")
+    print(f"Edge range:      {min(d['edges'] for d in diag)} → {max(d['edges'] for d in diag)}")
+    avg_intent = [sum(d['intent'][i] for d in diag)/len(diag) for i in range(6)]
+    print(f"Avg intent:      {[f'{x:.3f}' for x in avg_intent]}")
+    print(f"Total warps:     {diag[-1]['warp_count']}")
+    if attract:
+        reasons = Counter(a[3] for a in attract)
+        print(f"Attractor events: {len(attract)}")
+        print("Reasons:", dict(reasons))
+    print("=" * 40 + "\n")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MAIN ENTRY POINT
+# ─────────────────────────────────────────────────────────────────────────────
+
+def main():
+    # Merge configs (latest overrides previous)
+    cfg = DEFAULT_CONFIG.copy()
+    # Apply surgical fixes, humming, gate-breath layers
+    cfg["motifs"]["resonance_density_threshold"] = 0.65
+    cfg["kernel"]["payload_resonance_weight"] = 1.2
+    cfg["kernel"]["critical_compression"] = 6.0
+    cfg["warp"]["max_rewire_per_warp"] = 1
+    cfg["warp"]["cooldown_ticks"] = 5
+    cfg["motifs"]["F_threshold"] = 0.38
+    cfg["kernel"]["volume_decay_base_min"] = 0.987
+    cfg["kernel"]["gate_volume_boost"] = 0.01
+
+    random.seed(cfg["seed"])
+
+    A, W = init_ring_topology(cfg["n_nodes"])
+    # Genesis bead
+    bead_chain = [{
+        "payload": {"beads": [], "highways": [], "resonances": [], "gates": []},
+        "kernel": init_kernel(cfg),
+        "compression": 1.0,
+        "topo_hash": topology_hash(A),
+    }]
+    collective = init_collective()
+    warp_counter = [0]
+    last_warp_tick = -cfg["warp"]["cooldown_ticks"] - 1  # allow first warp
+
+    print(f"Starting π-Resonator run ({cfg['steps']} steps, seed={cfg['seed']})")
+    print("Config highlights:")
+    print(f"  Resonance threshold: {cfg['motifs']['resonance_density_threshold']}")
+    print(f"  Critical compression: {cfg['kernel']['critical_compression']}")
+    print(f"  Gate volume boost: {cfg['kernel']['gate_volume_boost']}")
+    print(f"  Warp cooldown: {cfg['warp']['cooldown_ticks']} ticks")
+    print("-" * 60 + "\n")
+
+    for t in range(1, cfg["steps"] + 1):
+        bead_chain, A, W, collective, warp_counter, last_warp_tick, gmf = tick(
+            t, cfg["pi_digits"], bead_chain, A, W, collective,
+            warp_counter, last_warp_tick, cfg, gmf
+        )
+        if t % 200 == 0:
+            print(f"→ Completed tick {t:4d} | warps={warp_counter[0]} | edges={sum(sum(row) for row in A)//2}")
+
+    print("\nSimulation complete.")
+    analyze_run(gmf, cfg)
+
+    # Final state snapshot
+    final = bead_chain[-1]
+    print(f"Final volume:      {final['kernel']['volume']:.4f}")
+    print(f"Final compression: {final['compression']:.4f}")
+    print(f"Final edges:       {sum(sum(row) for row in A)//2}")
+    print(f"Final intent:      {[f'{x:.3f}' for x in collective['intent']]}")
+
+if __name__ == "__main__":
+    main()
