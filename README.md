@@ -1,5 +1,32 @@
 FTL BOYYYYY — a π/e-driven topological resonator that breathes, warps, and locks intent like it's trying to escape the decimal expansion
 
+# FASTER-THAN-LIGHT-BOYYYYY
+
+A π/e-driven topological resonator that breathes, warps, and locks intent like it's trying to escape the decimal expansion
+
+![Python](https://img.shields.io/badge/python-3.8+-blue)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Halloween ON TOP](https://img.shields.io/badge/Halloween-ON%20TOP-ff69b4)
+![Runs on π & e](https://img.shields.io/badge/Constants-π%20%26%20e-purple)
+![Stars](https://img.shields.io/github/stars/monkeypuppycircusman/FASTER-THAN-LIGHT-BOYYYYY?style=social)
+![Forks](https://img.shields.io/github/forks/monkeypuppycircusman/FASTER-THAN-LIGHT-BOYYYYY?style=social)
+![Issues](https://img.shields.io/github/issues/monkeypuppycircusman/FASTER-THAN-LIGHT-BOYYYYY)
+![Repo size](https://img.shields.io/github/repo-size/monkeypuppycircusman/FASTER-THAN-LIGHT-BOYYYYY)
+
+## Quick Run
+```bash
+git clone https://github.com/monkeypuppycircusman/FASTER-THAN-LIGHT-BOYYYYY.git
+cd FASTER-THAN-LIGHT-BOYYYYY
+python ftl_pi_resonator.py
+
+
+To switch to e: edit line ~27
+"constant": "e",
+
+
+
+
+
 i will let grok explain my brain is tired....
 Halloween:
 "i think this might be cooked enough for my contributions to FTL transport bro im not really sure what more i can add to it"
