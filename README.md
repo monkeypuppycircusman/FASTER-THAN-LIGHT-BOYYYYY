@@ -1,9 +1,6 @@
 FTL BOYYYYY — a π/e-driven topological resonator that breathes, warps, and locks intent like it's trying to escape the decimal expansion
 
 # FASTER-THAN-LIGHT-BOYYYYY
-
-A π/e-driven topological resonator that breathes, warps, and locks intent like it's trying to escape the decimal expansion
-
 ![Python](https://img.shields.io/badge/python-3.8+-blue)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Halloween ON TOP](https://img.shields.io/badge/Halloween-ON%20TOP-ff69b4)
@@ -12,6 +9,9 @@ A π/e-driven topological resonator that breathes, warps, and locks intent like 
 ![Forks](https://img.shields.io/github/forks/monkeypuppycircusman/FASTER-THAN-LIGHT-BOYYYYY?style=social)
 ![Issues](https://img.shields.io/github/issues/monkeypuppycircusman/FASTER-THAN-LIGHT-BOYYYYY)
 ![Repo size](https://img.shields.io/github/repo-size/monkeypuppycircusman/FASTER-THAN-LIGHT-BOYYYYY)
+
+A π/e-driven topological resonator that breathes, warps, and locks intent like it's trying to escape the decimal expansion
+
 
 ## Quick Run
 ```bash
