@@ -1,4 +1,4 @@
-FTL teleport algebra
+FTL BOYYYYY — a π/e-driven topological resonator that breathes, warps, and locks intent like it's trying to escape the decimal expansion
 
 i will let grok explain my brain is tired....
 Halloween:
