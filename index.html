@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FTL v3.7 — Anchor Delta Resonator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #080c10;
+  --bg1: #0d1117;
+  --bg2: #111820;
+  --bg3: #16202c;
+  --border: rgba(255,255,255,0.07);
+  --border-hi: rgba(255,255,255,0.14);
+  --text: #e2eaf4;
+  --text2: #6b7d8f;
+  --text3: #3d4f5e;
+  --accent: #4f8fff;
+  --accent2: #7EB9FF;
+  --violet: #534AB7;
+  --violet-hi: #7B72E8;
+  --gold: #BA7517;
+  --gold-hi: #E59A2A;
+  --green: #0F6E56;
+  --green-hi: #1DA882;
+  --red: #E24B4A;
+  --red-hi: #FF6B6A;
+  --slate: #888780;
+  --glow-v: 0 0 16px rgba(83,74,183,0.35);
+  --glow-g: 0 0 16px rgba(15,110,86,0.35);
+  --glow-r: 0 0 16px rgba(226,75,74,0.35);
+  --mono: 'IBM Plex Mono', monospace;
+  --display: 'Syne', sans-serif;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text); }
+
+body {
+  font-family: var(--mono);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(79,143,255,0.05) 0%, transparent 70%),
+    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.018) 39px, rgba(255,255,255,0.018) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.018) 39px, rgba(255,255,255,0.018) 40px);
+  min-height: 100vh;
+}
+
+.shell {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.header-title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.header-title span {
+  color: var(--accent);
+  font-weight: 400;
+}
+.header-sub {
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green-hi);
+  box-shadow: 0 0 8px var(--green-hi);
+  display: inline-block;
+  margin-right: 6px;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ── Control row ── */
+.ctrl-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.ctrl-label {
+  font-size: 9px;
+  color: var(--text3);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  min-width: 56px;
+}
+.spacer { flex: 1; }
+
+.btn {
+  background: transparent;
+  border: 1px solid var(--border-hi);
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--text2);
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+  transition: all 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.btn::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: white;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.btn:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+.btn:hover::after { opacity: 0.04; }
+
+.btn.active {
+  border-color: var(--violet);
+  color: var(--violet-hi);
+  background: rgba(83,74,183,0.12);
+  box-shadow: var(--glow-v);
+}
+
+.btn-run {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 18px;
+  border-color: var(--accent);
+  color: var(--accent2);
+  background: rgba(79,143,255,0.08);
+}
+.btn-run:hover { background: rgba(79,143,255,0.16); }
+.btn-run.active {
+  background: rgba(79,143,255,0.18);
+  box-shadow: 0 0 16px rgba(79,143,255,0.3);
+  animation: run-pulse 1.5s ease-in-out infinite;
+}
+@keyframes run-pulse {
+  0%,100% { box-shadow: 0 0 12px rgba(79,143,255,0.25); }
+  50% { box-shadow: 0 0 24px rgba(79,143,255,0.5); }
+}
+
+.btn-tp {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 18px;
+  border-color: var(--violet);
+  color: var(--violet-hi);
+  background: rgba(83,74,183,0.1);
+}
+.btn-tp:hover { background: rgba(83,74,183,0.2); }
+
+.btn-reset {
+  font-size: 10px;
+  color: var(--text3);
+  border-color: var(--border);
+}
+.btn-reset:hover { color: var(--text2); }
+
+/* gate buttons */
+.btn-gate { font-size: 10px; padding: 4px 10px; }
+.btn-gate.active { border-color: currentColor; background: transparent; }
+.gate-444 { color: var(--gold); }
+.gate-444.active { background: rgba(186,117,23,0.1); box-shadow: 0 0 10px rgba(186,117,23,0.2); }
+.gate-777 { color: var(--violet-hi); }
+.gate-777.active { background: rgba(123,114,232,0.1); box-shadow: 0 0 10px rgba(123,114,232,0.2); }
+.gate-369 { color: var(--green-hi); }
+.gate-369.active { background: rgba(29,168,130,0.1); box-shadow: 0 0 10px rgba(29,168,130,0.2); }
+.gate-999 { color: var(--red-hi); }
+.gate-999.active { background: rgba(226,75,74,0.1); box-shadow: 0 0 10px rgba(226,75,74,0.2); }
+.gate-333 { color: var(--slate); }
+.gate-333.active { background: rgba(136,135,128,0.1); }
+
+/* ── Metrics ── */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.mcard {
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px 8px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.mcard::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+}
+.mcard-label {
+  font-size: 9px;
+  color: var(--text3);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.mcard-value {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--text);
+  line-height: 1;
+  transition: color 0.2s;
+}
+.mcard-value.flash { color: var(--accent2); }
+.pbar {
+  height: 2px;
+  background: var(--bg3);
+  border-radius: 1px;
+  margin-top: 7px;
+  overflow: hidden;
+}
+.pfill {
+  height: 100%;
+  border-radius: 1px;
+  transition: width 0.15s ease-out;
+}
+
+/* ── Canvas area ── */
+.canvas-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.canvas-wrap {
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+.canvas-wrap::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+}
+.canvas-tag {
+  position: absolute;
+  top: 8px; right: 10px;
+  font-size: 8px;
+  color: var(--text3);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  z-index: 1;
+  pointer-events: none;
+}
+canvas { width: 100%; display: block; }
+
+/* ── Anchor display ── */
+.info-card {
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  position: relative;
+  overflow: hidden;
+}
+.info-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+}
+.info-label {
+  font-size: 9px;
+  color: var(--text3);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.anchor-area {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-family: var(--mono);
+  background: var(--bg2);
+  border: 1px solid var(--border-hi);
+  border-radius: 3px;
+  padding: 3px 8px;
+  transition: all 0.15s;
+}
+.chip-empty {
+  font-size: 11px;
+  color: var(--text3);
+}
+
+/* ── Log ── */
+.log-area {
+  max-height: 130px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg3) transparent;
+}
+.log-area::-webkit-scrollbar { width: 3px; }
+.log-area::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+
+.log-entry {
+  font-size: 10px;
+  font-family: var(--mono);
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  line-height: 1.5;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.log-entry:last-child { border-bottom: none; }
+.log-tag {
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.log-msg { color: var(--text2); }
+
+.log-tp   .log-tag { background: rgba(83,74,183,0.2);  color: var(--violet-hi); }
+.log-stk  .log-tag { background: rgba(186,117,23,0.2); color: var(--gold-hi); }
+.log-warp .log-tag { background: rgba(226,75,74,0.2);  color: var(--red-hi); }
+.log-conf .log-tag { background: rgba(15,110,86,0.2);  color: var(--green-hi); }
+.log-tp   .log-msg { color: #8887b8; }
+.log-stk  .log-msg { color: #9d8050; }
+.log-warp .log-msg { color: #a86060; }
+.log-conf .log-msg { color: #4ea888; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .canvas-row { grid-template-columns: 1fr; }
+  .mcard-value { font-size: 18px; }
+  .adm-split { grid-template-columns: 1fr !important; }
+}
+
+/* ── Section divider ── */
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 2rem 0 1.5rem;
+  position: relative;
+}
+.section-divider::before, .section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-hi));
+}
+.section-divider::after {
+  background: linear-gradient(90deg, var(--border-hi), transparent);
+}
+.section-divider-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.section-divider-icon {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border-hi);
+  background: var(--bg1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  position: relative;
+}
+.section-divider-icon::before {
+  content: '';
+  position: absolute; inset: -4px;
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+  opacity: 0.15;
+}
+.section-divider-title {
+  font-family: var(--display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text3);
+  white-space: nowrap;
+}
+
+/* ── Anchor Delta Map ── */
+.adm-seq-btn {
+  background: transparent;
+  border: 1px solid var(--border-hi);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 10px;
+  cursor: pointer;
+  color: var(--text2);
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+  transition: all 0.15s;
+}
+.adm-seq-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+.adm-seq-btn.on {
+  color: var(--violet-hi);
+  border-color: var(--violet);
+  background: rgba(83,74,183,0.12);
+  box-shadow: 0 0 10px rgba(83,74,183,0.2);
+}
+.adm-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.adm-anchor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+}
+.adm-anchor-row:last-child { border-bottom: none; }
+.adm-pos { font-family: var(--mono); color: var(--text); min-width: 60px; font-size: 11px; }
+.adm-delta { font-family: var(--mono); font-size: 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 3px; padding: 2px 6px; color: var(--text2); white-space: nowrap; }
+.adm-context { font-size: 10px; color: var(--text3); font-family: var(--mono); }
+.adm-anchor-scroll { max-height: 200px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--bg3) transparent; }
+.adm-anchor-scroll::-webkit-scrollbar { width: 3px; }
+.adm-anchor-scroll::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+.adm-suggest-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 10px;
+  cursor: pointer;
+  color: var(--text3);
+  font-family: var(--mono);
+  transition: all 0.15s;
+}
+.adm-suggest-btn:hover { color: var(--accent2); border-color: var(--accent); background: rgba(79,143,255,0.06); }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <div class="header-title">FTL <span>v3.7</span> — Anchor Delta Resonator</div>
+      <div class="header-sub">Irrational constant gate simulation system</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:10px;color:var(--text3);letter-spacing:.1em;"><span class="status-dot"></span>NOMINAL</div>
+      <div style="font-size:9px;color:var(--text3);margin-top:2px;" id="hdr-tick">tick 0 / 1000</div>
+    </div>
+  </div>
+
+  <!-- Constant selector + run controls -->
+  <div class="ctrl-row" style="margin-bottom:10px;">
+    <span class="ctrl-label">constant</span>
+    <button class="btn active" id="cb-pi" onclick="setCon('pi')">π pi</button>
+    <button class="btn" id="cb-phi" onclick="setCon('phi')">φ phi</button>
+    <button class="btn" id="cb-e" onclick="setCon('e')">e euler</button>
+    <div class="spacer"></div>
+    <button class="btn btn-run" id="btn-run" onclick="toggleRun()">run v3.7</button>
+    <button class="btn btn-tp" id="btn-tp" onclick="manualTeleport()">teleport</button>
+    <button class="btn btn-reset" onclick="resetSim()">reset</button>
+  </div>
+
+  <!-- Gate toggles -->
+  <div class="ctrl-row" style="margin-bottom:14px;">
+    <span class="ctrl-label">gates</span>
+    <button class="btn btn-gate gate-444 active" id="gb-444" onclick="toggleGate('444')">444 → Δ369</button>
+    <button class="btn btn-gate gate-777 active" id="gb-777" onclick="toggleGate('777')">777 → Δ1000</button>
+    <button class="btn btn-gate gate-369 active" id="gb-369" onclick="toggleGate('369')">369 → Δ314</button>
+    <button class="btn btn-gate gate-999 active" id="gb-999" onclick="toggleGate('999')">999 → Δ694</button>
+    <button class="btn btn-gate gate-333" id="gb-333" onclick="toggleGate('333')">333 → Δ271</button>
+  </div>
+
+  <!-- Metrics row 1 -->
+  <div class="metrics-grid">
+    <div class="mcard">
+      <div class="mcard-label">tick</div>
+      <div class="mcard-value" id="m-tick">0</div>
+      <div class="pbar"><div class="pfill" id="pb-tick" style="width:0%;background:var(--accent);"></div></div>
+    </div>
+    <div class="mcard">
+      <div class="mcard-label">digit pos</div>
+      <div class="mcard-value" id="m-pos">0</div>
+    </div>
+    <div class="mcard">
+      <div class="mcard-label">volume</div>
+      <div class="mcard-value" id="m-vol">1.000</div>
+      <div class="pbar"><div class="pfill" id="pb-vol" style="width:100%;background:var(--green-hi);"></div></div>
+    </div>
+    <div class="mcard">
+      <div class="mcard-label">compression</div>
+      <div class="mcard-value" id="m-comp">1.00</div>
+    </div>
+  </div>
+
+  <!-- Metrics row 2 -->
+  <div class="metrics-grid" style="margin-bottom:8px;">
+    <div class="mcard">
+      <div class="mcard-label">teleports</div>
+      <div class="mcard-value" id="m-tp">0</div>
+    </div>
+    <div class="mcard">
+      <div class="mcard-label">confirmed hops</div>
+      <div class="mcard-value" id="m-conf">0</div>
+    </div>
+    <div class="mcard">
+      <div class="mcard-label">stacked gates</div>
+      <div class="mcard-value" id="m-stk">0</div>
+    </div>
+    <div class="mcard">
+      <div class="mcard-label">warps</div>
+      <div class="mcard-value" id="m-warp">0</div>
+    </div>
+  </div>
+
+  <!-- Canvas row -->
+  <div class="canvas-row">
+    <div class="canvas-wrap">
+      <div class="canvas-tag">orbital ring</div>
+      <canvas id="ring-cv" height="200"></canvas>
+    </div>
+    <div class="canvas-wrap">
+      <div class="canvas-tag">vol / compression trace</div>
+      <canvas id="trace-cv" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Anchor display -->
+  <div class="info-card">
+    <div class="info-label">active anchor — self-reporting gate</div>
+    <div class="anchor-area" id="anchor-display">
+      <span class="chip-empty">no anchor yet — run simulation</span>
+    </div>
+  </div>
+
+  <!-- Event log -->
+  <div class="info-card">
+    <div class="info-label">event log</div>
+    <div class="log-area" id="log-area">
+      <div class="log-entry"><span class="log-tag" style="background:var(--bg2);color:var(--text3);">idle</span><span class="log-msg">no events yet</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════
+     SECTION DIVIDER — teleport through the helix
+     ════════════════════════════════════════ -->
+<div class="shell" style="padding-top:0;">
+
+  <div class="section-divider">
+    <div class="section-divider-inner">
+      <div class="section-divider-icon">⬡</div>
+      <div class="section-divider-title">π anchor delta map</div>
+    </div>
+  </div>
+
+  <!-- sequence selector -->
+  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+    <span style="font-size:9px;color:var(--text3);letter-spacing:.15em;text-transform:uppercase;min-width:56px;">sequence</span>
+    <button id="adm-btn-777" class="adm-seq-btn on" onclick="admSelectSeq('777')">777</button>
+    <button id="adm-btn-111" class="adm-seq-btn" onclick="admSelectSeq('111')">111</button>
+    <button id="adm-btn-333" class="adm-seq-btn" onclick="admSelectSeq('333')">333</button>
+    <button id="adm-btn-444" class="adm-seq-btn" onclick="admSelectSeq('444')">444</button>
+    <button id="adm-btn-555" class="adm-seq-btn" onclick="admSelectSeq('555')">555</button>
+    <button id="adm-btn-666" class="adm-seq-btn" onclick="admSelectSeq('666')">666</button>
+    <button id="adm-btn-888" class="adm-seq-btn" onclick="admSelectSeq('888')">888</button>
+    <button id="adm-btn-999" class="adm-seq-btn" onclick="admSelectSeq('999')">999</button>
+    <button id="adm-btn-123" class="adm-seq-btn" onclick="admSelectSeq('123')">123</button>
+    <button id="adm-btn-369" class="adm-seq-btn" onclick="admSelectSeq('369')">369</button>
+    <button id="adm-btn-phi" class="adm-seq-btn" onclick="admSelectSeq('phi')" style="color:var(--gold);border-color:rgba(186,117,23,0.5);">φ618</button>
+    <button id="adm-btn-137" class="adm-seq-btn" onclick="admSelectSeq('137')">137</button>
+  </div>
+
+  <!-- stats row -->
+  <div class="metrics-grid" style="margin-bottom:8px;">
+    <div class="mcard">
+      <div class="mcard-label">occurrences</div>
+      <div class="mcard-value" id="adm-count" style="font-size:28px;">—</div>
+    </div>
+    <div class="mcard">
+      <div class="mcard-label">expected (10k)</div>
+      <div class="mcard-value" id="adm-expected" style="font-size:28px;">—</div>
+    </div>
+    <div class="mcard">
+      <div class="mcard-label">bias ratio</div>
+      <div class="mcard-value" id="adm-bias" style="font-size:28px;">—</div>
+    </div>
+    <div class="mcard">
+      <div class="mcard-label">mean delta</div>
+      <div class="mcard-value" id="adm-delta" style="font-size:28px;">—</div>
+    </div>
+  </div>
+
+  <!-- anchor list + delta chart -->
+  <div class="adm-split">
+    <div class="info-card" style="padding-bottom:8px;">
+      <div class="info-label">anchor positions (first 20)</div>
+      <div class="adm-anchor-scroll" id="adm-anchor-list"></div>
+    </div>
+    <div class="info-card">
+      <div class="info-label">delta distribution — gaps between anchors</div>
+      <div style="position:relative;height:190px;"><canvas id="adm-delta-chart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- helix map -->
+  <div class="info-card" style="margin-bottom:8px;">
+    <div class="info-label">helix anchor map — first 10k digits of π</div>
+    <canvas id="adm-helix" style="width:100%;display:block;" height="100"></canvas>
+  </div>
+
+  <!-- suggest buttons -->
+  <div style="display:flex;gap:6px;flex-wrap:wrap;">
+    <button class="adm-suggest-btn" onclick="sendPrompt && sendPrompt('what are the delta patterns telling us — are the gaps between 777 anchors themselves structured?')">analyze delta structure ↗</button>
+    <button class="adm-suggest-btn" onclick="sendPrompt && sendPrompt('compare anchor density of 777 vs 999 vs 369 in pi — which has the strongest signal?')">compare sequences ↗</button>
+    <button class="adm-suggest-btn" onclick="sendPrompt && sendPrompt('how do i use anchor deltas as teleport step sizes in the FTL system?')">build teleport step ↗</button>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const DIGITS = {
+  pi:  "14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664709384460955058223172535940812848111745028410270193852110555964462294895493038196442881097566593344612847564823378678316527120190914564856692346034861045432664821339360726024914127372458700660631558817488152092096282925409171536436789259036001133053054882046652138414695194151160943305727036575959195309218611738193261179310511854807446237996274956735188575272489122793818301194912983367336244065664308602139494639522473719070217986094370277053921717629317675238467481846766940513200056812714526356082778577134275778960917363717872146844090122495343014654958537105079727968925892354201995611212902196086403441815981362977477130996051870721134999999837297804995105973173281609631859502445945534690830264252230825334468503526193118817101000313783875288658753320838206417177691473035982534904287554687311595628638823537875937519577818577805321712268066130019278766111959092164201989",
+  phi: "6180339887498948482045868343656381177203091798057628621354486227052604628189024497072072041893911374847540880753868917521266338622235369317931800607667263544333890865959395829056383226613199282902678806752087668925017116962070322210432162695486262963136144381497587012203408058879544547492461856953648644492410443207713449470495658467885098743394422125448770664780915884607499887124007652170575179788341662562494075890697040002812104276217711177780531531714101170466659914669798731761356006708748071013179523689427521948435305678300228785699782977834784587822891109762500302696156170025046433824377648610283831268330372429267526311653392473167111211588186385133162038400522216579128667529465490681131715993432359734949850904094762132229810172610705961164562990981629055520852479035240602017279974717534277759277862561943208275051312181562855122248093947123414517022373580577278616008688382952304592647878017889921990270776903895321968198615143780314997411069260886742962267575605231727775203536139362",
+  e:   "2718281828459045235360287471352662497757247093699959574966967627724076630353547594571382178525166427427466391932003059921817413596629043572900334295260595630738132328627943490763233829880753195251019011573834187930702154089149934884167509244761460668082264800168477411853742345442437107539077744992069551702761838606261331384583000752044933826560297606737113200709328709127443747047230696977209310141692836819025515108657463772111252389784425056953697707854499699679468644549059879316368892300987931277361782154249992295763514822082698951936680331825288693984964651058209392398294887933203625094431173012381970684161403970198376793206832823764648042953118023287825098194558153017567173613320698112509961818815930416903515988885193458072738667385894228792284998920868058257492796104841984443634632449684875602336248270419786232090021609902353043699418491463140934317381436405462531520961836908887070167683964243781405927145635490613031072085103837505101157477041718986106873969655212671546889570350354"
+};
+
+const ANCHOR_DELTAS = { '444':369,'777':1000,'369':314,'999':694,'333':271 };
+const GATE_COLORS   = { '444':'#BA7517','777':'#7B72E8','369':'#1DA882','999':'#FF6B6A','333':'#888780' };
+const CON_COLORS    = { pi:'#4f8fff', phi:'#BA7517', e:'#1DA882' };
+
+let con = 'pi', activeGates = new Set(['444','777','369','999']), runInterval = null;
+let S = null;
+
+function makeState() {
+  const dstr = DIGITS[con];
+  const digits = dstr.split('').map(Number);
+  const anchors = {};
+  Object.keys(ANCHOR_DELTAS).forEach(seq => {
+    const pos = [];
+    for (let i = 0; i <= dstr.length - seq.length; i++)
+      if (dstr.slice(i, i+seq.length) === seq) pos.push(i);
+    anchors[seq] = pos;
+  });
+  return {
+    tick:0, maxTick:1000, pos:0, volume:1.0, compression:1.0,
+    teleports:0, confirmed:0, stacked:0, warps:0,
+    digits, dstr, anchors,
+    lastGate:null, lastTP:null,
+    history:{ vol:[], comp:[], pos:[] },
+    log:[], cooldown:0
+  };
+}
+
+function findGateAt(pos) {
+  const hits = [];
+  for (const seq of activeGates)
+    if (S.dstr.slice(pos, pos+seq.length) === seq) hits.push(seq);
+  return hits;
+}
+
+function teleportStep(fromPos, seq) {
+  const step = ANCHOR_DELTAS[seq] || 1000;
+  const target = (fromPos + step) % S.dstr.length;
+  const landing = S.dstr.slice(target, target+3);
+  const confirmed = Object.keys(ANCHOR_DELTAS).some(s => landing.startsWith(s) && activeGates.has(s));
+  return { target, landing, confirmed, step };
+}
+
+function stepSim() {
+  if (!S || S.tick >= S.maxTick) return false;
+  S.tick++;
+  if (S.cooldown > 0) S.cooldown--;
+
+  const gates = findGateAt(S.pos);
+  let didTP = false;
+
+  if (gates.length > 0) {
+    const primaryGate = gates[0];
+    S.lastGate = { seq: primaryGate, pos: S.pos, all: gates };
+    if (gates.length >= 2) {
+      S.stacked++;
+      S.log.unshift({ type:'stk', msg:`t=${S.tick} stacked gate [${gates.join('+')}] @ pos ${S.pos}` });
+    }
+    if (S.cooldown === 0) {
+      const tp = teleportStep(S.pos, primaryGate);
+      S.pos = tp.target;
+      S.teleports++;
+      didTP = true;
+      S.cooldown = 5;
+      if (tp.confirmed) {
+        S.confirmed++;
+        S.volume = Math.min(1, S.volume + 0.12);
+        S.compression = Math.max(1, S.compression * 0.85);
+        S.log.unshift({ type:'conf', msg:`t=${S.tick} confirmed hop [${primaryGate}→${tp.landing}] Δ${tp.step} vol+` });
+      } else {
+        S.log.unshift({ type:'tp', msg:`t=${S.tick} teleport [${primaryGate}] Δ${tp.step} → pos ${tp.target} (${tp.landing})` });
+      }
+      S.lastTP = tp;
+    }
+  }
+
+  if (!didTP) {
+    const decay = 0.988 + Math.random() * 0.007;
+    S.volume = Math.max(0.08, S.volume * decay);
+    if (S.volume < 0.12 && Math.random() < 0.08) S.volume = Math.min(1, S.volume * 2.2);
+    const beadScore = Math.min(8, gates.length * 2 + (S.pos % 7 === 0 ? 1 : 0));
+    S.compression = 1 + beadScore * Math.max(0.1, 1 - S.volume) * 0.4;
+    if (S.compression > 6 && S.cooldown === 0) {
+      S.pos = (S.pos + Math.floor(Math.random() * 50 + 10)) % S.dstr.length;
+      S.warps++;
+      S.cooldown = 5;
+      S.log.unshift({ type:'warp', msg:`t=${S.tick} warp @ comp ${S.compression.toFixed(2)} → pos ${S.pos}` });
+    } else {
+      S.pos = (S.pos + 1) % S.dstr.length;
+    }
+  }
+
+  S.history.vol.push(S.volume);
+  S.history.comp.push(Math.min(S.compression, 10));
+  S.history.pos.push(S.pos);
+  if (S.history.vol.length > 400) { S.history.vol.shift(); S.history.comp.shift(); S.history.pos.shift(); }
+  if (S.log.length > 60) S.log.length = 60;
+  return true;
+}
+
+function updateUI() {
+  if (!S) return;
+  document.getElementById('m-tick').textContent = S.tick;
+  document.getElementById('m-pos').textContent = S.pos;
+  document.getElementById('m-vol').textContent = S.volume.toFixed(3);
+  document.getElementById('m-comp').textContent = S.compression.toFixed(2);
+  document.getElementById('m-tp').textContent = S.teleports;
+  document.getElementById('m-conf').textContent = S.confirmed;
+  document.getElementById('m-stk').textContent = S.stacked;
+  document.getElementById('m-warp').textContent = S.warps;
+  document.getElementById('hdr-tick').textContent = `tick ${S.tick} / ${S.maxTick}`;
+  document.getElementById('pb-tick').style.width = ((S.tick/S.maxTick)*100).toFixed(1)+'%';
+  document.getElementById('pb-vol').style.width = (S.volume*100).toFixed(1)+'%';
+
+  const logEl = document.getElementById('log-area');
+  const entries = S.log.slice(0, 20);
+  if (entries.length === 0) {
+    logEl.innerHTML = `<div class="log-entry"><span class="log-tag" style="background:var(--bg2);color:var(--text3);">idle</span><span class="log-msg">no events yet</span></div>`;
+  } else {
+    logEl.innerHTML = entries.map(l => {
+      const typeLabels = { tp:'tp', stk:'stack', warp:'warp', conf:'conf' };
+      return `<div class="log-entry log-${l.type}">
+        <span class="log-tag">${typeLabels[l.type]||l.type}</span>
+        <span class="log-msg">${l.msg}</span>
+      </div>`;
+    }).join('');
+  }
+
+  const ad = document.getElementById('anchor-display');
+  if (S.lastGate) {
+    const g = S.lastGate;
+    const chips = g.all.map(seq =>
+      `<span class="chip" style="border-color:${GATE_COLORS[seq]}40;color:${GATE_COLORS[seq]};">${seq} <span style="opacity:0.5;">Δ</span>${ANCHOR_DELTAS[seq]}</span>`
+    ).join('');
+    const tpInfo = S.lastTP
+      ? `<span class="chip">→ pos ${S.lastTP.target} <span style="color:${S.lastTP.confirmed?'var(--green-hi)':'var(--text3)'};margin-left:4px;">${S.lastTP.confirmed?'confirmed':'open'}</span></span>`
+      : '';
+    const selfRef = g.all.includes('444')
+      ? `<span class="chip" style="color:var(--gold);border-color:rgba(186,117,23,0.3);">self-ref: 444 step = 369 = tracked seq</span>`
+      : '';
+    ad.innerHTML = chips + tpInfo + selfRef;
+  } else {
+    ad.innerHTML = `<span class="chip-empty">no anchor yet — run simulation</span>`;
+  }
+
+  drawRing();
+  drawTrace();
+}
+
+function drawRing() {
+  const cv = document.getElementById('ring-cv');
+  const W = cv.offsetWidth || 280;
+  cv.width = W; cv.height = 200;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, W, 200);
+  const cx = W/2, cy = 100;
+  const cc = CON_COLORS[con];
+
+  // Background glow
+  const grad = ctx.createRadialGradient(cx,cy,0,cx,cy,95);
+  grad.addColorStop(0, cc+'0a');
+  grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad; ctx.fillRect(0,0,W,200);
+
+  [52, 88].forEach((r, ri) => {
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
+    ctx.strokeStyle = cc+'18'; ctx.lineWidth = 1; ctx.stroke();
+
+    const n = ri === 0 ? 9 : 15;
+    for (let i = 0; i < n; i++) {
+      const a = (i/n)*Math.PI*2 - Math.PI/2;
+      const x = cx + r*Math.cos(a), y = cy + r*Math.sin(a);
+      const isSeqNode = S && Object.keys(ANCHOR_DELTAS).some(seq => {
+        const idx = Math.floor((i/n) * (S.anchors[seq]?.length||0));
+        return activeGates.has(seq) && S.anchors[seq]?.[idx] !== undefined;
+      });
+      ctx.beginPath(); ctx.arc(x, y, isSeqNode ? 4 : 2, 0, Math.PI*2);
+      ctx.fillStyle = isSeqNode ? cc+'cc' : cc+'28'; ctx.fill();
+    }
+  });
+
+  if (S) {
+    const frac = S.pos / S.dstr.length;
+    const r = 52;
+    const a = frac * Math.PI*2 - Math.PI/2;
+    const x = cx + r*Math.cos(a), y = cy + r*Math.sin(a);
+
+    // Trail
+    for (let t = 1; t <= 5; t++) {
+      const tf = ((S.pos - t * 3 + S.dstr.length) % S.dstr.length) / S.dstr.length;
+      const ta = tf * Math.PI*2 - Math.PI/2;
+      const tx = cx + r*Math.cos(ta), ty = cy + r*Math.sin(ta);
+      ctx.beginPath(); ctx.arc(tx, ty, 3 - t*0.4, 0, Math.PI*2);
+      ctx.fillStyle = cc + Math.floor((1 - t/6)*100).toString(16).padStart(2,'0');
+      ctx.fill();
+    }
+
+    // Main dot glow
+    ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI*2);
+    const glow = ctx.createRadialGradient(x,y,0,x,y,10);
+    glow.addColorStop(0, cc+'55'); glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow; ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2);
+    ctx.fillStyle = cc; ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI*2);
+    ctx.fillStyle = '#fff'; ctx.fill();
+
+    if (S.lastGate) {
+      const gateFrac = S.lastGate.pos / S.dstr.length;
+      const ga = gateFrac * Math.PI*2 - Math.PI/2;
+      const gx = cx + 88*Math.cos(ga), gy = cy + 88*Math.sin(ga);
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(gx, gy);
+      ctx.strokeStyle = cc+'30'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.beginPath(); ctx.arc(gx, gy, 5, 0, Math.PI*2);
+      ctx.fillStyle = GATE_COLORS[S.lastGate.seq]; ctx.fill();
+      ctx.beginPath(); ctx.arc(gx, gy, 2, 0, Math.PI*2);
+      ctx.fillStyle = '#fff'; ctx.fill();
+    }
+
+    ctx.font = '9px IBM Plex Mono, monospace';
+    ctx.fillStyle = cc + 'bb';
+    ctx.fillText(`pos ${S.pos}`, 8, 16);
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillText(`…${S.dstr.slice(S.pos, S.pos+4)}…`, 8, 28);
+  }
+}
+
+function drawTrace() {
+  const cv = document.getElementById('trace-cv');
+  const W = cv.offsetWidth || 280;
+  cv.width = W; cv.height = 200;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, W, 200);
+
+  if (!S || S.history.vol.length < 2) {
+    ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.font = '11px IBM Plex Mono, monospace';
+    ctx.fillText('run to see trace', 20, 104); return;
+  }
+
+  const vol = S.history.vol, comp = S.history.comp, n = vol.length;
+  const pad = 20, h = 200 - pad*2, w = W - pad*2;
+  const cc = CON_COLORS[con];
+
+  // Subtle area fill under vol
+  ctx.beginPath();
+  vol.forEach((v, i) => {
+    const x = pad + (i/(n-1))*w, y = pad + h - (v/1)*h;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.lineTo(pad + w, pad + h); ctx.lineTo(pad, pad + h); ctx.closePath();
+  const areaGrad = ctx.createLinearGradient(0, pad, 0, pad+h);
+  areaGrad.addColorStop(0, cc+'20'); areaGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = areaGrad; ctx.fill();
+
+  const drawLine = (data, max, clr, lw) => {
+    ctx.beginPath(); ctx.strokeStyle = clr; ctx.lineWidth = lw;
+    data.forEach((v, i) => {
+      const x = pad + (i/(n-1))*w, y = pad + h - (v/max)*h;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }); ctx.stroke();
+  };
+  drawLine(vol, 1, cc+'cc', 1.5);
+  drawLine(comp.map(c => c/10), 1, '#FF6B6A88', 1);
+
+  S.log.filter(l => l.type === 'conf' || l.type === 'stk').slice(0, 5).forEach(l => {
+    const tMatch = l.msg.match(/t=(\d+)/);
+    if (!tMatch) return;
+    const t = parseInt(tMatch[1]);
+    const idx = n - (S.tick - t);
+    if (idx >= 0 && idx < n) {
+      const x = pad + (idx/(n-1))*w;
+      ctx.beginPath(); ctx.moveTo(x, pad); ctx.lineTo(x, pad+h);
+      ctx.strokeStyle = l.type === 'stk' ? '#BA751740' : '#1DA88240';
+      ctx.lineWidth = 1; ctx.stroke();
+    }
+  });
+
+  ctx.font = '9px IBM Plex Mono, monospace';
+  ctx.fillStyle = cc+'bb'; ctx.fillText('vol', pad, pad+12);
+  ctx.fillStyle = '#FF6B6Abb'; ctx.fillText('comp/10', pad+32, pad+12);
+}
+
+function toggleRun() {
+  if (runInterval) {
+    clearInterval(runInterval); runInterval = null;
+    document.getElementById('btn-run').textContent = 'run v3.7';
+    document.getElementById('btn-run').classList.remove('active');
+  } else {
+    if (!S) S = makeState();
+    document.getElementById('btn-run').textContent = 'stop';
+    document.getElementById('btn-run').classList.add('active');
+    runInterval = setInterval(() => {
+      for (let i = 0; i < 6; i++) {
+        if (!stepSim()) {
+          clearInterval(runInterval); runInterval = null;
+          document.getElementById('btn-run').textContent = 'run v3.7';
+          document.getElementById('btn-run').classList.remove('active');
+          break;
+        }
+      }
+      updateUI();
+    }, 50);
+  }
+}
+
+function manualTeleport() {
+  if (!S) S = makeState();
+  const anchors = Object.keys(ANCHOR_DELTAS).filter(s => activeGates.has(s));
+  const seq = anchors[Math.floor(Math.random() * anchors.length)];
+  const poss = S.anchors[seq];
+  if (!poss || !poss.length) return;
+  const target = poss[Math.floor(Math.random() * poss.length)];
+  const oldPos = S.pos;
+  S.pos = target;
+  const tp = teleportStep(target, seq);
+  S.teleports++;
+  S.cooldown = 5;
+  if (tp.confirmed) { S.confirmed++; S.volume = Math.min(1, S.volume + 0.15); }
+  S.log.unshift({ type:'tp', msg:`MANUAL tp [${seq}] ${oldPos}→${target} Δ${tp.step} ${tp.confirmed?'CONFIRMED':''}` });
+  S.lastGate = { seq, pos:target, all:[seq] }; S.lastTP = tp;
+  updateUI();
+}
+
+function resetSim() {
+  if (runInterval) { clearInterval(runInterval); runInterval = null; }
+  document.getElementById('btn-run').textContent = 'run v3.7';
+  document.getElementById('btn-run').classList.remove('active');
+  S = makeState(); updateUI();
+}
+
+function setCon(c) {
+  con = c;
+  ['pi','phi','e'].forEach(k => {
+    document.getElementById('cb-'+k).classList.toggle('active', k === c);
+  });
+  if (S) { S = makeState(); updateUI(); }
+}
+
+function toggleGate(g) {
+  if (activeGates.has(g)) activeGates.delete(g); else activeGates.add(g);
+  document.getElementById('gb-'+g).classList.toggle('active', activeGates.has(g));
+}
+
+S = makeState();
+updateUI();
+window.addEventListener('resize', () => updateUI());
+
+// ════════════════════════════════════════
+// ANCHOR DELTA MAP
+// ════════════════════════════════════════
+
+const ADM_PI = "14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664709384460955058223172535940812848111745028410270193852110555964462294895493038196442881097566593344612847564823378678316527120190914564856692346034861045432664821339360726024914127372458700660631558817488152092096282925409171536436789259036001133053054882046652138414695194151160943305727036575959195309218611738193261179310511854807446237996274956735188575272489122793818301194912983367336244065664308602139494639522473719070217986094370277053921717629317675238467481846766940513200056812714526356082778577134275778960917363717872146844090122495343014654958537105079727968925892354201995611212902196086403441815981362977477130996051870721134999999837297804995105973173281609631859502445945534690830264252230825334468503526193118817101000313783875288658753320838206417177691473035982534904287554687311595628638823537875937519577818577805321712268066130019278766111959092164201989380952572010654858632788659361533818279682303019520353018529689957736225994138912497217752834791315155748572424541506959508295331168617278558890750983817546374649393192550604009277016711390098488240128583616035637076601047101819429555961989467678374494482553797747268471040475346462080466842590694912933136770289891521047521620569660240580381501935112533824300355876402474964732639141992726042699227967823547816360093417216412199245863150302861829745557067498385054945885869269956909272107975093029553211653449872027559602364806654991198818347977535663698074265425278625518184175746728909777727938000816470600161452491921732172147723501414419735685481613611573525521334757418494684385233239073941433345477624168625189835694855620992192221842725502542568876717904946016534668049886272327917860857843838279679766814541009538837863609506800642251252051173929848960841284886269456042419652850222106611863067442786220391949450471237137869609563643719172874677646575739624138908658326459958133904780275900994657640789512694683983525957098258226205224894077267194782684826014769909026401363944374553050682034962524517493996514314298091906592509372216964615157098583874105978859597729754989301617539284681382686838689427741559918559252459539594310499725246808459872736446958486538367362226260991246080512438843904512441365497627807977156914359977001296160894416948685558484063534220722258284886481584560285060168427394522674676788952521385225499546667278239864565961163548862305774564980355936345681743241125150760694794510965960940252288797108931456691368672287489405601015033086179286809208747609178249385890097149096759852613655497818931297848216829989487226588048575640142704775551323796414515237462343645428584447952658678210511413547357395231134271661021359695362314429524849371871101457654035902799344037420073105785390621983874478084784896833214457138687519435064302184531910484810053706146806749192781911979399520614196634287544406437451237181921799983910159195618146751426912397489409071864942319615679452080951465502252316038819301420937621378559566389377870830390697920773467221825625996615014215030680384477345492026054146659252014974428507325186660021324340881907104863317346496514539057962685610055081066587969981635747363840525714591028970641401109712062804390397595156771577004203378699360072305587631763594218731251471205329281918261861258673215791984148488291644706095752706957220917567116722910981690915280173506712748583222871835209353965725121083579151369882091444210067510334671103141267111369908658516398315019701651511685171437657618351556508849099898599823873455283316355076479185358932261854896321329330898570642046752590709154814165498594616371802709819943099244889575712828905923233260972997120844335732654893823911932597463667305836041428138830320382490375898524374417029132765618093773444030707469211201913020330380197621101100449293215160842444859637669838952286847831235526582131449576857262433441893039686426243410773226978028073189154411010446823252716201052652272111660396665573092547110557853763466820653109896526918620564769312570586356620185581007293606598764861179104533488503461136576867532494416680396265797877185560845529654126654085306143444318586769751456614068007002378776591344017127494704205622305389945613140711270004078547332699390814546646458807972708266830634328587856983052358089330657574067954571637752542021149557615814002501262285941302164715509792592309907965473761255176567513575178296664547791745011299614890304639947132962107340437518957359614589019389713111790429782856475032031986915140287080859904801094121472213179476477726224142548545403321571853061422881375850430633217518297986622371721591607716692547487389866549494501146540628433663937900397692656721463853067360965712091807638327166416274888800786925602902284721040317211860820419000422966171196377921337575114959501566049631862947265473642523081770367515906735023507283540567040386743513622224771589150495309844489333096340878076932599397805419341447377441842631298608099888687413260472156951623965864573021631598193195167353812974167729478672422924654366800980676928238280689964004824354037014163149658979409243237896907069779422362508221688957383798623001593776471651228935786015881617557829735233446042815126272037343146531977774160319906655418763979293344195215413418994854447345673831624993419131814809277771038638773431772075456545322077709212019051660962804909263601975988281613323166636528619326827096834149819600941737277208093773588363014163549782711203937477670432995776710397920119892434931582069882153202397450980100837743184765472465080316327988534771060433882741849149028286992197684937098040398723996804025539701979741780001851971881601779693472268116793049854043619412091602836977979401339921642968888907627758918057521073802697541793578234753674296980774994784202220498888834397764754421745895368010";
+
+const ADM_SEQUENCES = {
+  '777':'777','111':'111','333':'333','444':'444',
+  '555':'555','666':'666','888':'888','999':'999',
+  '123':'123','369':'369','phi':'618','137':'137'
+};
+const ADM_SEQ_COLORS = {
+  '777':'#7B72E8','111':'#1DA882','333':'#E59A2A','444':'#d05a35',
+  '555':'#D4537E','666':'#888780','888':'#4f8fff','999':'#FF6B6A',
+  '123':'#1D9E75','369':'#639922','phi':'#E59A2A','137':'#9d97f0'
+};
+
+let admCurrentSeq = '777';
+let admChartInstance = null;
+
+function admFindAnchors(seq) {
+  const pattern = ADM_SEQUENCES[seq] || seq;
+  const positions = [];
+  for (let i = 0; i <= ADM_PI.length - pattern.length; i++)
+    if (ADM_PI.slice(i, i + pattern.length) === pattern) positions.push(i + 1);
+  return positions;
+}
+
+function admGetDeltas(positions) {
+  const deltas = [];
+  for (let i = 1; i < positions.length; i++) deltas.push(positions[i] - positions[i-1]);
+  return deltas;
+}
+
+function admSelectSeq(seq) {
+  admCurrentSeq = seq;
+  Object.keys(ADM_SEQUENCES).forEach(k => {
+    const el = document.getElementById('adm-btn-' + k);
+    if (!el) return;
+    el.classList.toggle('on', k === seq);
+    if (k !== seq) { el.style.color = ''; el.style.borderColor = ''; }
+  });
+  admRender();
+}
+
+function admRender() {
+  const positions = admFindAnchors(admCurrentSeq);
+  const deltas = admGetDeltas(positions);
+  const color = ADM_SEQ_COLORS[admCurrentSeq] || '#7B72E8';
+  const n = positions.length;
+  const expected = Math.round(ADM_PI.length / 1000);
+  const bias = n > 0 ? (n / expected).toFixed(2) : '—';
+  const meanDelta = deltas.length ? Math.round(deltas.reduce((a,b)=>a+b,0)/deltas.length) : '—';
+
+  document.getElementById('adm-count').textContent = n;
+  document.getElementById('adm-expected').textContent = expected;
+  document.getElementById('adm-bias').textContent = bias !== '—' ? bias + 'x' : '—';
+  document.getElementById('adm-delta').textContent = meanDelta;
+
+  const list = document.getElementById('adm-anchor-list');
+  list.innerHTML = positions.slice(0, 20).map((p, i) => {
+    const delta = i > 0 ? positions[i] - positions[i-1] : null;
+    return `<div class="adm-anchor-row">
+      <span class="adm-pos">pos ${p}</span>
+      ${delta !== null
+        ? `<span class="adm-delta">Δ${delta}</span>`
+        : `<span class="adm-delta" style="opacity:0.3;">—</span>`}
+      <span class="adm-context">…${ADM_PI.slice(Math.max(0,p-2), p+5)}…</span>
+    </div>`;
+  }).join('');
+
+  admDrawDeltaChart(deltas, color);
+  admDrawHelixMap(positions, color);
+}
+
+function admDrawDeltaChart(deltas, color) {
+  if (!deltas.length) return;
+  const bucketSize = 200;
+  const maxD = Math.min(Math.max(...deltas), 5000);
+  const buckets = {};
+  deltas.forEach(d => {
+    const b = Math.floor(Math.min(d, maxD) / bucketSize) * bucketSize;
+    buckets[b] = (buckets[b] || 0) + 1;
+  });
+  const labels = Object.keys(buckets).map(Number).sort((a,b)=>a-b);
+  const data = labels.map(l => buckets[l]);
+
+  if (admChartInstance) { admChartInstance.destroy(); admChartInstance = null; }
+  admChartInstance = new Chart(document.getElementById('adm-delta-chart'), {
+    type: 'bar',
+    data: {
+      labels: labels.map(l => l === 0 ? '<200' : l >= 5000 ? '5k+' : (l/1000).toFixed(1)+'k'),
+      datasets: [{ data, backgroundColor: color + 'aa', borderWidth: 0, borderRadius: 3 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 9, family: "'IBM Plex Mono', monospace" }, color: 'rgba(107,125,143,0.7)' } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { font: { size: 9, family: "'IBM Plex Mono', monospace" }, color: 'rgba(107,125,143,0.7)' } }
+      }
+    }
+  });
+}
+
+function admDrawHelixMap(positions, color) {
+  const canvas = document.getElementById('adm-helix');
+  const W = canvas.offsetWidth || 600;
+  canvas.width = W; canvas.height = 100;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, 100);
+  const total = ADM_PI.length;
+  const H = 100;
+  const waveAmp = 30;
+  const freq = 12;
+
+  // Background glow strip
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+  bgGrad.addColorStop(0, 'transparent');
+  bgGrad.addColorStop(0.5, color + '08');
+  bgGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, W, H);
+
+  // Center line
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 0.5;
+  ctx.beginPath(); ctx.moveTo(0, H/2); ctx.lineTo(W, H/2); ctx.stroke();
+
+  // Helix wave
+  ctx.strokeStyle = color + '25'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = 0; x <= W; x++) {
+    const y = H/2 + waveAmp * Math.sin((x / W) * freq * Math.PI * 2);
+    x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Teleport lines between anchors — draw arcs above the helix
+  const vis = positions.filter(p => (p / total) * W < W);
+  for (let i = 0; i < vis.length - 1; i++) {
+    const x1 = (vis[i] / total) * W;
+    const x2 = (vis[i+1] / total) * W;
+    const mx = (x1 + x2) / 2;
+    const arcH = Math.min(22, Math.abs(x2 - x1) * 0.25);
+    ctx.beginPath();
+    ctx.moveTo(x1, H/2 - 2);
+    ctx.quadraticCurveTo(mx, H/2 - arcH, x2, H/2 - 2);
+    ctx.strokeStyle = color + '30'; ctx.lineWidth = 1; ctx.stroke();
+  }
+
+  // Anchor pins
+  positions.forEach((p) => {
+    const x = (p / total) * W;
+    const waveY = H/2 + waveAmp * Math.sin((x / W) * freq * Math.PI * 2);
+    // vertical tick
+    ctx.beginPath(); ctx.moveTo(x, waveY - 11); ctx.lineTo(x, waveY + 11);
+    ctx.strokeStyle = color + 'aa'; ctx.lineWidth = 1; ctx.stroke();
+    // glow halo
+    ctx.beginPath(); ctx.arc(x, waveY, 6, 0, Math.PI*2);
+    const halo = ctx.createRadialGradient(x, waveY, 0, x, waveY, 6);
+    halo.addColorStop(0, color + '40'); halo.addColorStop(1, 'transparent');
+    ctx.fillStyle = halo; ctx.fill();
+    // dot
+    ctx.beginPath(); ctx.arc(x, waveY, 3, 0, Math.PI*2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.beginPath(); ctx.arc(x, waveY, 1.5, 0, Math.PI*2);
+    ctx.fillStyle = '#fff'; ctx.fill();
+  });
+
+  // Labels
+  ctx.font = '9px IBM Plex Mono, monospace';
+  ctx.fillStyle = 'rgba(61,79,94,0.9)';
+  ctx.fillText('0', 4, H - 6);
+  ctx.fillText(total.toLocaleString(), W - 44, H - 6);
+  ctx.fillStyle = 'rgba(61,79,94,0.6)';
+  ctx.fillText('digits of π →', W/2 - 30, H - 6);
+}
+
+admRender();
+window.addEventListener('resize', () => admRender());
+</script>
+</body>
+</html>
